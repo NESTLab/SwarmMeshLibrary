@@ -14,16 +14,65 @@
 #include <argos3/core/utility/logging/argos_log.h>
 #include <argos3/core/utility/math/rng.h>
 
-#include <swarmmesh/swarmmesh.h>
+#include "swarmmesh/swarmmesh.h"
 
 #include <queue>
 #include <sstream>
 
-using namespace argos;
-
 /* TODO: make this configurable */
 const uint16_t BUCKET_SIZE = 10;
-const Real BLOB_SENSOR_RANGE = 100;
+const argos::Real BLOB_SENSOR_RANGE = 100;
+
+/****************************************/
+/****************************************/
+
+class CMySwarmMesh;
+class CSwarmMeshController;
+class HashEventDataType;
+// class CMyFilter;
+// class CMySum;
+
+/****************************************/
+/****************************************/
+
+/* Structure representing events */
+struct SEventData {
+   /* Type of event encoded as a color */
+   std::string type;
+   /* Value associated to the event */
+   float payload;
+   /* Spatial location of the event */
+   std::pair<float, float> location;
+};
+
+/****************************************/
+/****************************************/
+
+SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
+
+swarmmesh::SKey HashEventDataType(SEventData& s_value);
+
+/****************************************/
+/****************************************/
+
+class CMySwarmMesh : public swarmmesh::CSwarmMesh<SEventData> {
+   
+public:
+   
+   CMySwarmMesh() :
+      CSwarmMesh(UnpackEventDataType,
+                 HashEventDataType) {
+                    ;
+      // RegisterFilter<CMyFilter>(this);
+      // RegisterAggregateOperation<CMySum>(this);
+   }
+   
+   ~CMySwarmMesh() {
+   }
+
+};
+
+using namespace argos;
 
 class CSwarmMeshController : public CCI_Controller {
 
@@ -102,16 +151,6 @@ private:
 
 public:
 
-   /* Structure representing events */
-   struct SEventData {
-      /* Type of event encoded as a color */
-      std::string type;
-      /* Value associated to the event */
-      float payload;
-      /* Spatial location of the event */
-      std::pair<float, float> location;
-   };
-
    /* Structure representing neighbors */
    struct SNeighbor
    {
@@ -131,47 +170,8 @@ public:
    /* Vector of neighbors */
    std::vector<SNeighbor> m_vecNeighbors;
 
-   /* Data hashing function */
-   class HashByType {// : public CSwarmMesh<SEventData>::Hash {
-
-      virtual uint16_t operator() (SEventData s_event) const {
-
-         std::string strColor = s_event.type;
-         /* Hashing based on blob color */
-         uint16_t unPrefix;
-         if(strColor == "gray10") {unPrefix = 1;}
-         else if(strColor == "white") {unPrefix = 1 + BUCKET_SIZE;}
-         else if(strColor == "red") {unPrefix = 1 + 2 * BUCKET_SIZE;}
-         else if(strColor  == "green") {unPrefix = 1 + 3 * BUCKET_SIZE;}
-         else if(strColor  == "blue") {unPrefix = 1 + 4 * BUCKET_SIZE;}
-         else if(strColor  == "magenta") {unPrefix = 1 + 5 * BUCKET_SIZE;}
-         else if(strColor == "cyan") {unPrefix = 1 + 6 * BUCKET_SIZE;}
-         else if(strColor  == "yellow") {unPrefix = 1 + 7 * BUCKET_SIZE;}
-         else if(strColor  == "orange") {unPrefix = 1 + 8 * BUCKET_SIZE;}
-         else if(strColor  == "brown") {unPrefix = 1 + 9 * BUCKET_SIZE;}
-         else if(strColor  == "purple") {unPrefix = 1 + 10 * BUCKET_SIZE;}
-         else if(strColor  ==  "gray50") {unPrefix = 1 + 11 * BUCKET_SIZE;}
-         else  unPrefix = 0;
-         
-         return unPrefix;
-      };
-
-   };
-   HashByType m_cHash;
-
-   /* Key partitioning function by degree (D) and memory (M) */
-   class PartitionDM {//: public CSwarmMesh<SEventData>::Partition {
-
-      virtual uint16_t operator() (uint16_t un_degree, uint16_t un_mem) const{
-         if(un_degree == 0) return un_mem;
-         return un_degree * un_mem; 
-      };
-   
-   };
-   PartitionDM m_cPartition;
-
    /* Data structure object */
-   // CSwarmMesh<SEventData> *m_cMesh = new CSwarmMesh<SEventData>(); 
+   CMySwarmMesh cMySM; 
 
    /* Returns the list of events recorded by the robot
       at the current time step */

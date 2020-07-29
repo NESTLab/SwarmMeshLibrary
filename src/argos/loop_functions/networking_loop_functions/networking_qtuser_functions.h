@@ -3,7 +3,7 @@
 
 #include <argos3/plugins/simulator/visualizations/qt-opengl/qtopengl_user_functions.h>
 #include <argos3/plugins/robots/foot-bot/simulator/footbot_entity.h>
-#include <controllers/swarmmesh_controller/swarmmesh_controller.h>
+#include <argos/controllers/swarmmesh_controller/swarmmesh_controller.h>
 
 using namespace argos;
 

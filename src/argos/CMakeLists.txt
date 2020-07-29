@@ -1,6 +1,6 @@
-cmake_minimum_required(VERSION 3.1)
-project(argos3_examples)
-set(CMAKE_CXX_STANDARD 11)
+# cmake_minimum_required(VERSION 3.1)
+# project(argos3_examples)
+# set(CMAKE_CXX_STANDARD 11)
 
 
 if(APPLE)
@@ -43,13 +43,17 @@ endif(GALIB_FOUND)
 #    include_directories(${LUA_INCLUDE_DIR})
 # endif(LUA52_FOUND)
 
+# find_package(swarm_mesh_library REQUIRED)
+# if(swarm_mesh_library_FOUND)
+#   message( "${swarm_mesh_library_INCLUDE_DIRS}")
+  # include_directories(${SwarmMeshLibrary_INCLUDE_DIRS})
+# endif(swarm_mesh_library_FOUND)
+
 # Set ARGoS include dir
 include_directories(${CMAKE_SOURCE_DIR} ${ARGOS_INCLUDE_DIRS})# ${LUA_INCLUDE_DIR})
 
 # Set ARGoS link dir
 link_directories(${ARGOS_LIBRARY_DIRS})
-
-add_subdirectory(swarmmesh)
 
 # Descend into the controllers directory
 add_subdirectory(controllers)

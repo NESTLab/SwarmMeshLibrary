@@ -2,7 +2,7 @@
 #define NETWORKING_LOOP_FUNCTIONS_H
 
 /* The controller */
-#include <controllers/swarmmesh_controller/swarmmesh_controller.h>
+#include <argos/controllers/swarmmesh_controller/swarmmesh_controller.h>
 
 /* ARGoS-related headers */
 #include <argos3/core/utility/math/rng.h>

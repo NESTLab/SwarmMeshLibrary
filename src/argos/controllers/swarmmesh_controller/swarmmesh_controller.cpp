@@ -3,6 +3,92 @@
 /****************************************/
 /****************************************/
 
+SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_offset) {
+   SEventData sValue;
+   sValue.type = swarmmesh::UnpackString(vec_buffer, un_offset);
+   sValue.payload = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
+   sValue.location = std::make_pair(swarmmesh::UnpackFloat(vec_buffer, un_offset),
+                                    swarmmesh::UnpackFloat(vec_buffer, un_offset));
+   return sValue;
+}
+
+swarmmesh::SKey HashEventDataType(SEventData& s_value) {
+      std::string strColor = s_value.type;
+
+      /* Data hashing based on blob color */
+      uint32_t unHash;
+      if(strColor == "gray10") {unHash = 1;}
+      else if(strColor == "white") {unHash = 1 + BUCKET_SIZE;}
+      else if(strColor == "red") {unHash = 1 + 2 * BUCKET_SIZE;}
+      else if(strColor  == "green") {unHash = 1 + 3 * BUCKET_SIZE;}
+      else if(strColor  == "blue") {unHash = 1 + 4 * BUCKET_SIZE;}
+      else if(strColor  == "magenta") {unHash = 1 + 5 * BUCKET_SIZE;}
+      else if(strColor == "cyan") {unHash = 1 + 6 * BUCKET_SIZE;}
+      else if(strColor  == "yellow") {unHash = 1 + 7 * BUCKET_SIZE;}
+      else if(strColor  == "orange") {unHash = 1 + 8 * BUCKET_SIZE;}
+      else if(strColor  == "brown") {unHash = 1 + 9 * BUCKET_SIZE;}
+      else if(strColor  == "purple") {unHash = 1 + 10 * BUCKET_SIZE;}
+      else if(strColor  ==  "gray50") {unHash = 1 + 11 * BUCKET_SIZE;}
+      else  unHash = 0;
+
+      /* Unique tuple identifier based on robot id and 
+         tuple count */
+      // ++unTupleCount;
+      uint32_t unIdentifier = ((uint32_t) 1 << 16) +  0;
+      return swarmmesh::SKey(unHash, unIdentifier);
+}
+
+// class HashEventDataType {
+
+//    private:
+//    uint16_t unRobotId = 0;
+//    uint16_t unTupleCount = 0;
+
+//    // HashEventDataType() : 
+//    //    unRobotId(0),
+//    //    unTupleCount(0) {}
+
+//    public:
+//    swarmmesh::SKey operator()(SEventData& s_value) const {
+
+//       std::string strColor = s_value.type;
+
+//       /* Data hashing based on blob color */
+//       uint32_t unHash;
+//       if(strColor == "gray10") {unHash = 1;}
+//       else if(strColor == "white") {unHash = 1 + BUCKET_SIZE;}
+//       else if(strColor == "red") {unHash = 1 + 2 * BUCKET_SIZE;}
+//       else if(strColor  == "green") {unHash = 1 + 3 * BUCKET_SIZE;}
+//       else if(strColor  == "blue") {unHash = 1 + 4 * BUCKET_SIZE;}
+//       else if(strColor  == "magenta") {unHash = 1 + 5 * BUCKET_SIZE;}
+//       else if(strColor == "cyan") {unHash = 1 + 6 * BUCKET_SIZE;}
+//       else if(strColor  == "yellow") {unHash = 1 + 7 * BUCKET_SIZE;}
+//       else if(strColor  == "orange") {unHash = 1 + 8 * BUCKET_SIZE;}
+//       else if(strColor  == "brown") {unHash = 1 + 9 * BUCKET_SIZE;}
+//       else if(strColor  == "purple") {unHash = 1 + 10 * BUCKET_SIZE;}
+//       else if(strColor  ==  "gray50") {unHash = 1 + 11 * BUCKET_SIZE;}
+//       else  unHash = 0;
+
+//       /* Unique tuple identifier based on robot id and 
+//          tuple count */
+//       // ++unTupleCount;
+//       uint32_t unIdentifier = ((uint32_t) unRobotId << 16) +  unTupleCount;
+//       return swarmmesh::SKey(unHash, unIdentifier);
+//    }
+// };
+
+// /* Key partitioning function by degree (D) and memory (M) */
+// class PartitionDM : public CSwarmMesh<SEventData>::Partition {
+
+//    uint16_t operator() (uint16_t un_degree, uint16_t un_mem) const{
+//       if(un_degree == 0) return un_mem;
+//       return un_degree * un_mem; 
+//    };
+
+
+/****************************************/
+/****************************************/
+
 CSwarmMeshController::CSwarmMeshController() :
    m_pcWheels(NULL),
    m_pcProximity(NULL),
@@ -89,7 +175,7 @@ void CSwarmMeshController::ControlStep()
    {
       SEventData sEvent = sEvents.front();
       sEvents.pop();
-      // m_cMesh->Put(sEvent);
+      //m_cMesh.Put(sEvent);
    }
 
    ProcessOutMsgs();
@@ -99,7 +185,7 @@ void CSwarmMeshController::ControlStep()
 /****************************************/
 /****************************************/
 
-std::queue<CSwarmMeshController::SEventData> CSwarmMeshController::RecordEvents() 
+std::queue<SEventData> CSwarmMeshController::RecordEvents() 
 {
    std::queue<SEventData> sEvents;
 
@@ -183,7 +269,7 @@ CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEv
 void CSwarmMeshController::ProcessInMsgs()
 {
    SNeighbor sNeighbor;
-   m_vecNeighbors.push_back(sNeighbor);
+   //m_vecNeighbors.push_back(sNeighbor);
 }
 
 /****************************************/

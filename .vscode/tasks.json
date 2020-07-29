@@ -4,7 +4,7 @@
         {
             "label": "run",
             "type": "shell",
-            "command": "argos3 -c argos/experiments/networking_uniform.argos",
+            "command": "argos3 -c src/argos/experiments/networking_uniform.argos",
             "dependsOn": [
                 "build"
             ],
