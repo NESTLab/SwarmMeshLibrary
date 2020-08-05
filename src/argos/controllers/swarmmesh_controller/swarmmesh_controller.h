@@ -28,7 +28,7 @@ const argos::Real BLOB_SENSOR_RANGE = 100;
 
 class CMySwarmMesh;
 class CSwarmMeshController;
-class HashEventDataType;
+// class HashEventDataType;
 // class CMyFilter;
 // class CMySum;
 
@@ -50,6 +50,8 @@ struct SEventData {
 
 SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
 
+void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_value);
+
 swarmmesh::SKey HashEventDataType(SEventData& s_value);
 
 /****************************************/
@@ -61,11 +63,8 @@ public:
    
    CMySwarmMesh() :
       CSwarmMesh(UnpackEventDataType,
-                 HashEventDataType) {
-                    ;
-      // RegisterFilter<CMyFilter>(this);
-      // RegisterAggregateOperation<CMySum>(this);
-   }
+                 PackEventDataType,
+                 HashEventDataType) {}
    
    ~CMySwarmMesh() {
    }
@@ -161,17 +160,16 @@ public:
             return (RId == x.RId);}
    };
 
+   std::vector<SNeighbor> m_vecNeighbors;
+
    /* The robot numeric id */
    UInt16 m_unRobotId;
 
    /* Pointer to random number generator */
    CRandom::CRNG* m_pcRNG;
 
-   /* Vector of neighbors */
-   std::vector<SNeighbor> m_vecNeighbors;
-
    /* Data structure object */
-   CMySwarmMesh cMySM; 
+   CMySwarmMesh m_cMySM; 
 
    /* Returns the list of events recorded by the robot
       at the current time step */

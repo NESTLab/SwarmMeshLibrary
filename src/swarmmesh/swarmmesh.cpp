@@ -3,11 +3,6 @@
 /****************************************/
 /****************************************/
 
-
-
-/****************************************/
-/****************************************/
-
 void swarmmesh::PackUInt8(std::vector<uint8_t>& vec_buffer, uint8_t un_value) {
     vec_buffer.push_back(un_value);
 }
@@ -27,6 +22,14 @@ void swarmmesh::PackUInt32(std::vector<uint8_t>& vec_buffer, uint32_t un_value) 
 void swarmmesh::PackFloat(std::vector<uint8_t>& vec_buffer, float f_value) {
     uint32_t unValue = *reinterpret_cast<uint32_t*>(&f_value); 
     swarmmesh::PackUInt32(vec_buffer, unValue);
+}
+
+void swarmmesh::PackString(std::vector<uint8_t>& vec_buffer, std::string str_value) {
+    vec_buffer.push_back(uint8_t(str_value.size()));
+    for (auto it = str_value.begin(); it != str_value.end(); ++it)
+    {
+        vec_buffer.push_back((uint8_t)(*it));
+    }
 }
 
 /****************************************/
@@ -89,7 +92,7 @@ float swarmmesh::UnpackFloat(const std::vector<uint8_t>& vec_buffer, size_t& un_
     throw swarmmesh::CSwarmMeshException("Can't parse float at offset ", un_offset);
 }
 
-std::string UnpackString(const std::vector<uint8_t>& vec_buffer, size_t& un_offset) {
+std::string swarmmesh::UnpackString(const std::vector<uint8_t>& vec_buffer, size_t& un_offset) {
     uint8_t unLength;
     try {
         unLength = swarmmesh::UnpackUInt8(vec_buffer, un_offset);

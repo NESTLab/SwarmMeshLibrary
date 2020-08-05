@@ -25,15 +25,15 @@ SMyDataType UnpackMyDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_
    return sValue;
 }
 
+
+void PackMyDataType(std::vector<uint8_t>& vec_buffer, const SMyDataType& s_data) {
+   swarmmesh::PackUInt32(vec_buffer, s_data.X);
+   swarmmesh::PackUInt32(vec_buffer, s_data.Y);
+}
+
 swarmmesh::SKey HashMyDataType1(SMyDataType& s_value) {
    return swarmmesh::SKey(s_value.X + s_value.Y, 0);
 }
-
-struct HashMyDataType2 {
-   swarmmesh::SKey operator()(SMyDataType& s_value) {
-      return swarmmesh::SKey(s_value.X + s_value.Y, 0);
-   }
-};
 
 /****************************************/
 /****************************************/
@@ -44,6 +44,7 @@ public:
    
    CMySwarmMesh() :
       CSwarmMesh(UnpackMyDataType,
+                 PackMyDataType,
                  HashMyDataType1) {
       RegisterFilter<CMyFilter>(this);
       RegisterAggregateOperation<CMySum>(this);

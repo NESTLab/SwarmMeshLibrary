@@ -6,10 +6,17 @@
 SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_offset) {
    SEventData sValue;
    sValue.type = swarmmesh::UnpackString(vec_buffer, un_offset);
-   sValue.payload = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
+   sValue.payload = swarmmesh::UnpackFloat(vec_buffer, un_offset);
    sValue.location = std::make_pair(swarmmesh::UnpackFloat(vec_buffer, un_offset),
                                     swarmmesh::UnpackFloat(vec_buffer, un_offset));
    return sValue;
+}
+
+void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_event) {
+   swarmmesh::PackString(vec_buffer, s_event.type);
+   swarmmesh::PackFloat(vec_buffer, s_event.payload);
+   swarmmesh::PackFloat(vec_buffer, s_event.location.first);
+   swarmmesh::PackFloat(vec_buffer, s_event.location.second);
 }
 
 swarmmesh::SKey HashEventDataType(SEventData& s_value) {
@@ -122,7 +129,12 @@ void CSwarmMeshController::Init(TConfigurationNode& t_node)
    GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
    GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
 
-   ProcessOutMsgs();
+   // const std::string& strRobotId = GetId();
+   // uint16_t unRId = FromString<UInt16>(strRobotId.substr(1));
+
+   /* Initialize SwarmMesh variables */
+   // m_cMySM.Init(unRId);
+   // ProcessOutMsgs();
 }
 
 /****************************************/
@@ -165,19 +177,28 @@ void CSwarmMeshController::Diffuse()
 void CSwarmMeshController::ControlStep() 
 {
 
+   /* Process incoming messages */
    ProcessInMsgs();
 
+   /* Move */
    Diffuse();
 
-   std::queue<SEventData> sEvents = RecordEvents();
-   
+   /* Record events */
+   std::queue<SEventData> sEvents = RecordEvents();   
    while(!sEvents.empty())
    {
+      /* Retrieve event to write in SwarmMesh */
       SEventData sEvent = sEvents.front();
       sEvents.pop();
-      //m_cMesh.Put(sEvent);
+
+      /* Perform a put operation in SwarmMesh */
+      // m_cMySM.Put(sEvent);
    }
 
+   /* Tell SwarmMesh to queue messages for routing data */
+   m_cMySM.Route();
+
+   /* Process outgoing messages */
    ProcessOutMsgs();
 
 }
@@ -268,8 +289,33 @@ CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEv
 
 void CSwarmMeshController::ProcessInMsgs()
 {
-   SNeighbor sNeighbor;
-   //m_vecNeighbors.push_back(sNeighbor);
+
+   m_cMySM.ResetNeighbors();
+
+   const CCI_RangeAndBearingSensor::TReadings& tPackets = m_pcRABS->GetReadings();
+
+   for(size_t i = 0; i < tPackets.size(); ++i) {
+      /* Copy packet into temporary buffer */
+      CByteArray cData = tPackets[i].Data;
+      /* Get robot id and update neighbor information */
+      UInt16 unRobotId = cData.PopFront<UInt16>();
+      /* Record neighbors in argos */
+      SNeighbor sNeighbor;
+      sNeighbor.RId = unRobotId;
+      sNeighbor.Distance = tPackets[i].Range;
+      sNeighbor.Bearing = tPackets[i].HorizontalBearing;
+      m_vecNeighbors.push_back(sNeighbor);
+      /* Record neighbor to SwarmMesh */
+      m_cMySM.AddNeighbor(unRobotId,
+                          sNeighbor.Distance,
+                          sNeighbor.Bearing.GetValue());
+      /* Convert CByteArray to STL vector */
+      std::vector<uint8_t> vecBuffer;
+      while(cData.Size()) vecBuffer.push_back(cData.PopFront<uint8_t>());
+      /* Process swarmmesh messages */
+      // m_cMySM.Deserialize(vecBuffer, 0);
+   }
+
 }
 
 /****************************************/
@@ -277,17 +323,17 @@ void CSwarmMeshController::ProcessInMsgs()
 
 void CSwarmMeshController::ProcessOutMsgs()
 {
-      // m_unPacketSize = m_pcRABA->GetSize();
-   /* Broadcast RID to Neighbors */
-   // const std::string& strRobotId = GetId();
-   // m_unRobotId = FromString<UInt16>(strRobotId.substr(1));
-   // // m_unNodeKey = m_unRobotId;
-   // CByteArray cBuffer;
-   // cBuffer << m_unRobotId;
-   // cBuffer << m_unRobotId;
-   // // cBuffer << m_unNodeKey;
-   // while(cBuffer.Size() < m_pcRABA->GetSize()) cBuffer << static_cast<UInt8>(0);
-   // m_pcRABA->SetData(cBuffer);
+   /* Fill buffer with swarmmesh messages */
+   std::vector<uint8_t> vecBuffer;
+   m_cMySM.Serialize(vecBuffer);
+
+   /* Convert stl vector to CByteArray */
+   CByteArray cBuffer;
+   for (auto elem : vecBuffer) cBuffer << elem;
+   /* Pad buffer with zeros to match fixed packet size */
+   while(cBuffer.Size() < m_pcRABA->GetSize()) cBuffer << static_cast<UInt8>(0);
+   m_pcRABA->SetData(cBuffer);
+
 }
 
 /****************************************/
