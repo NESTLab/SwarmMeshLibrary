@@ -165,6 +165,9 @@ public:
    /* The robot numeric id */
    UInt16 m_unRobotId;
 
+   /* Number of recorded events */
+   UInt16 m_unTupleCount;
+
    /* Pointer to random number generator */
    CRandom::CRNG* m_pcRNG;
 

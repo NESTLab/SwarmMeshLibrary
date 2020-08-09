@@ -36,7 +36,7 @@ void swarmmesh::PackString(std::vector<uint8_t>& vec_buffer, std::string str_val
 /****************************************/
 
 bool swarmmesh::UnpackValid(const std::vector<uint8_t>& vec_buffer, size_t un_offset, size_t un_length) {
-    return vec_buffer.size() > un_offset + un_length;
+    return vec_buffer.size() >= un_offset + un_length;
 }
 
 template<class T>

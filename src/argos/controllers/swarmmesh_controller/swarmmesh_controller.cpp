@@ -41,7 +41,7 @@ swarmmesh::SKey HashEventDataType(SEventData& s_value) {
       /* Unique tuple identifier based on robot id and 
          tuple count */
       // ++unTupleCount;
-      uint32_t unIdentifier = ((uint32_t) 1 << 16) +  0;
+      uint32_t unIdentifier = ((uint32_t) 1 << 16) +  3;
       return swarmmesh::SKey(unHash, unIdentifier);
 }
 
@@ -129,12 +129,12 @@ void CSwarmMeshController::Init(TConfigurationNode& t_node)
    GetNodeAttributeOrDefault(t_node, "delta", m_fDelta, m_fDelta);
    GetNodeAttributeOrDefault(t_node, "velocity", m_fWheelVelocity, m_fWheelVelocity);
 
-   // const std::string& strRobotId = GetId();
-   // uint16_t unRId = FromString<UInt16>(strRobotId.substr(1));
-
    /* Initialize SwarmMesh variables */
-   // m_cMySM.Init(unRId);
-   // ProcessOutMsgs();
+   const std::string& strRobotId = GetId();
+   m_unRobotId = FromString<UInt16>(strRobotId.substr(1));
+   m_unTupleCount = 0; 
+   m_cMySM.Init(m_unRobotId);
+   ProcessOutMsgs();
 }
 
 /****************************************/
@@ -190,9 +190,9 @@ void CSwarmMeshController::ControlStep()
       /* Retrieve event to write in SwarmMesh */
       SEventData sEvent = sEvents.front();
       sEvents.pop();
-
+      ++m_unTupleCount;
       /* Perform a put operation in SwarmMesh */
-      // m_cMySM.Put(sEvent);
+      m_cMySM.Put(sEvent);
    }
 
    /* Tell SwarmMesh to queue messages for routing data */
@@ -244,7 +244,6 @@ std::queue<SEventData> CSwarmMeshController::RecordEvents()
          }
       }
       else {bLocalLeader = false;}
-
       /* If leader, record the event */
       if (bLocalLeader) {
          SEventData sEvent;
@@ -298,7 +297,7 @@ void CSwarmMeshController::ProcessInMsgs()
       /* Copy packet into temporary buffer */
       CByteArray cData = tPackets[i].Data;
       /* Get robot id and update neighbor information */
-      UInt16 unRobotId = cData.PopFront<UInt16>();
+      UInt16 unRobotId = cData.PopFront<uint16_t>();
       /* Record neighbors in argos */
       SNeighbor sNeighbor;
       sNeighbor.RId = unRobotId;
@@ -310,10 +309,11 @@ void CSwarmMeshController::ProcessInMsgs()
                           sNeighbor.Distance,
                           sNeighbor.Bearing.GetValue());
       /* Convert CByteArray to STL vector */
-      std::vector<uint8_t> vecBuffer;
-      while(cData.Size()) vecBuffer.push_back(cData.PopFront<uint8_t>());
+      std::vector<std::uint8_t> vecBuffer;
+      while(cData.Size()) vecBuffer.push_back((uint8_t) cData.PopFront<uint8_t>());
       /* Process swarmmesh messages */
-      // m_cMySM.Deserialize(vecBuffer, 0);
+      size_t offset = 0;
+      m_cMySM.Deserialize(vecBuffer, offset);
    }
 
 }
@@ -323,15 +323,22 @@ void CSwarmMeshController::ProcessInMsgs()
 
 void CSwarmMeshController::ProcessOutMsgs()
 {
-   /* Fill buffer with swarmmesh messages */
+
    std::vector<uint8_t> vecBuffer;
+
+   /* Pre-pend robot id to any message*/
+   swarmmesh::PackUInt16(vecBuffer, m_unRobotId);
+
+   /* Fill buffer with swarmmesh messages */
    m_cMySM.Serialize(vecBuffer);
 
    /* Convert stl vector to CByteArray */
    CByteArray cBuffer;
    for (auto elem : vecBuffer) cBuffer << elem;
+
    /* Pad buffer with zeros to match fixed packet size */
    while(cBuffer.Size() < m_pcRABA->GetSize()) cBuffer << static_cast<UInt8>(0);
+
    m_pcRABA->SetData(cBuffer);
 
 }

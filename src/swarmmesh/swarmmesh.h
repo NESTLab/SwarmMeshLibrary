@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <map>
 #include <algorithm>
+#include <iostream>
 
 const static uint16_t MEMORY_CAPACITY = 10;
 const static uint16_t ROUTING_CAPACITY = 10;
@@ -378,7 +379,8 @@ namespace swarmmesh {
          /* Get available storage memory */
          size_t unFreeMemory = MEMORY_CAPACITY - m_vecStoredTuples.size();
          /* Return node id given current neighbor list and storage memory */
-         return unNumNeighbors == 0 ? unFreeMemory : unFreeMemory * unNumNeighbors;
+         uint32_t res = (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
+         return res;
       }
 
       /* Check if this tuple can be stored */
@@ -421,7 +423,7 @@ namespace swarmmesh {
                break;
             case MSG_OP_ERASE:
                /* Set message type */
-               PackUInt8(vec_buffer, 2);
+               PackUInt8(vec_buffer, (uint8_t) eMsgType);
                break;
             case MSG_OP_FILTER:
                /* TODO */
@@ -441,7 +443,7 @@ namespace swarmmesh {
       }
 
       size_t Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) override {
-         
+
          while(un_offset < vec_buffer.size()) {
             /* Get message type */
             uint8_t unMsgType = UnpackUInt8(vec_buffer, un_offset);
@@ -457,12 +459,13 @@ namespace swarmmesh {
                   break;
                }
                case MSG_OP_PUT: {
+                  return un_offset;
                   /* Create the tuple */
                   STuple sTuple;
                   sTuple.Value = m_funUnpack(vec_buffer, un_offset);
                   sTuple.Key = m_funHash(sTuple.Value);
                   /* Perform put operation */
-                  Put(sTuple);
+                  _Put(sTuple);
                   break;
                }
                case MSG_OP_ERASE: {
@@ -524,7 +527,8 @@ namespace swarmmesh {
                   break;
                }
                default: {
-                  throw CSwarmMeshException("Unknown message type ", unMsgType, " at offset ", un_offset);
+                  return un_offset;
+                  //throw CSwarmMeshException("Unknown message type ", unMsgType, " at offset ", un_offset);
                }
             } // switch(unMsgType)
          } // while(un_offset < vec_buffer.size())
@@ -593,13 +597,13 @@ namespace swarmmesh {
          sTuple.Value = m_funUnpack(vec_buffer, offset);
          sTuple.Key = m_funHash(sTuple.Value);
          /* Call put operation on tuple */
-         Put(sTuple);
+         _Put(sTuple);
       }
    
       /**
        * Put operation
        */
-      void Put(const STuple& s_tuple) {
+      void _Put(const STuple& s_tuple) {
          
          /* Compute current Node Id */
          uint32_t unNodeId = Partition();
@@ -680,6 +684,10 @@ namespace swarmmesh {
             ++unCount;
          }
          /*TODO: Route other messages */
+         // for (auto const& item : m_queueOutMsgs) {
+         //    std::cout << " MESSAGE IN QUEUE " << (uint8_t) item.first << std::endl;
+         // }
+
       }
 
       /****************************************/
@@ -790,13 +798,13 @@ namespace swarmmesh {
    private:
 
       enum EMsgType {
-         MSG_NGHBRS = 0,
-         MSG_OP_PUT,
-         MSG_OP_ERASE,
-         MSG_OP_FILTER,
-         MSG_OP_TUPLE,
-         MSG_OP_AGGREGATE,
-         MSG_NUM
+         MSG_NGHBRS = 1,
+         MSG_OP_PUT = 2,
+         MSG_OP_ERASE = 3,
+         MSG_OP_FILTER = 4,
+         MSG_OP_TUPLE = 5,
+         MSG_OP_AGGREGATE = 6,
+         MSG_NUM = 7
       };
 
       struct SMsg {
