@@ -1,7 +1,7 @@
 # cmake_minimum_required(VERSION 3.3)
 
 # project(SwarmMeshLibrary)
-
+set(CMAKE_CXX_STANDARD 11)
 
 # function(my_export_target _target _include_dir)
 #     file(
