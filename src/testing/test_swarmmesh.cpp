@@ -44,8 +44,7 @@ public:
    
    CMySwarmMesh() :
       CSwarmMesh(UnpackMyDataType,
-                 PackMyDataType,
-                 HashMyDataType1) {
+                 PackMyDataType) {
       RegisterFilter<CMyFilter>(this);
       RegisterAggregateOperation<CMySum>(this);
    }

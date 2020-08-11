@@ -28,7 +28,7 @@ const argos::Real BLOB_SENSOR_RANGE = 100;
 
 class CMySwarmMesh;
 class CSwarmMeshController;
-// class HashEventDataType;
+class HashEventDataType;
 // class CMyFilter;
 // class CMySum;
 
@@ -52,19 +52,34 @@ SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& u
 
 void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_value);
 
-swarmmesh::SKey HashEventDataType(SEventData& s_value);
+// swarmmesh::SKey HashEventDataType(SEventData& s_value);
 
 /****************************************/
 /****************************************/
+
+class HashEventDataType {
+
+   private:
+   uint16_t unRobotId = 0;
+   uint16_t unTupleCount = 0;
+   
+
+   public:
+      HashEventDataType() : 
+         unRobotId(0),
+         unTupleCount(0) {}
+
+      void Init(uint16_t unRId) {unRobotId = unRId;}
+      swarmmesh::SKey operator()(SEventData& s_value);
+};
 
 class CMySwarmMesh : public swarmmesh::CSwarmMesh<SEventData> {
-   
+   HashEventDataType hashEvent;
 public:
-   
    CMySwarmMesh() :
       CSwarmMesh(UnpackEventDataType,
-                 PackEventDataType,
-                 HashEventDataType) {}
+                 PackEventDataType) {}
+   void Init(uint16_t unRId);
    
    ~CMySwarmMesh() {
    }

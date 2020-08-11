@@ -19,45 +19,7 @@ void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_eve
    swarmmesh::PackFloat(vec_buffer, s_event.location.second);
 }
 
-swarmmesh::SKey HashEventDataType(SEventData& s_value) {
-      std::string strColor = s_value.type;
-
-      /* Data hashing based on blob color */
-      uint32_t unHash;
-      if(strColor == "gray10") {unHash = 1;}
-      else if(strColor == "white") {unHash = 1 + BUCKET_SIZE;}
-      else if(strColor == "red") {unHash = 1 + 2 * BUCKET_SIZE;}
-      else if(strColor  == "green") {unHash = 1 + 3 * BUCKET_SIZE;}
-      else if(strColor  == "blue") {unHash = 1 + 4 * BUCKET_SIZE;}
-      else if(strColor  == "magenta") {unHash = 1 + 5 * BUCKET_SIZE;}
-      else if(strColor == "cyan") {unHash = 1 + 6 * BUCKET_SIZE;}
-      else if(strColor  == "yellow") {unHash = 1 + 7 * BUCKET_SIZE;}
-      else if(strColor  == "orange") {unHash = 1 + 8 * BUCKET_SIZE;}
-      else if(strColor  == "brown") {unHash = 1 + 9 * BUCKET_SIZE;}
-      else if(strColor  == "purple") {unHash = 1 + 10 * BUCKET_SIZE;}
-      else if(strColor  ==  "gray50") {unHash = 1 + 11 * BUCKET_SIZE;}
-      else  unHash = 0;
-
-      /* Unique tuple identifier based on robot id and 
-         tuple count */
-      // ++unTupleCount;
-      uint32_t unIdentifier = ((uint32_t) 1 << 16) +  3;
-      return swarmmesh::SKey(unHash, unIdentifier);
-}
-
-// class HashEventDataType {
-
-//    private:
-//    uint16_t unRobotId = 0;
-//    uint16_t unTupleCount = 0;
-
-//    // HashEventDataType() : 
-//    //    unRobotId(0),
-//    //    unTupleCount(0) {}
-
-//    public:
-//    swarmmesh::SKey operator()(SEventData& s_value) const {
-
+// swarmmesh::SKey HashEventDataType(SEventData& s_value) {
 //       std::string strColor = s_value.type;
 
 //       /* Data hashing based on blob color */
@@ -79,10 +41,38 @@ swarmmesh::SKey HashEventDataType(SEventData& s_value) {
 //       /* Unique tuple identifier based on robot id and 
 //          tuple count */
 //       // ++unTupleCount;
-//       uint32_t unIdentifier = ((uint32_t) unRobotId << 16) +  unTupleCount;
+//       uint32_t unIdentifier = ((uint32_t) 1 << 16) +  3;
 //       return swarmmesh::SKey(unHash, unIdentifier);
-//    }
-// };
+// }
+
+
+swarmmesh::SKey HashEventDataType::operator()(SEventData& s_value) {
+   
+   std::string strColor = s_value.type;
+
+   /* Data hashing based on blob color */
+   uint32_t unHash;
+   if(strColor == "gray10") {unHash = 1;}
+   else if(strColor == "white") {unHash = 1 + BUCKET_SIZE;}
+   else if(strColor == "red") {unHash = 1 + 2 * BUCKET_SIZE;}
+   else if(strColor  == "green") {unHash = 1 + 3 * BUCKET_SIZE;}
+   else if(strColor  == "blue") {unHash = 1 + 4 * BUCKET_SIZE;}
+   else if(strColor  == "magenta") {unHash = 1 + 5 * BUCKET_SIZE;}
+   else if(strColor == "cyan") {unHash = 1 + 6 * BUCKET_SIZE;}
+   else if(strColor  == "yellow") {unHash = 1 + 7 * BUCKET_SIZE;}
+   else if(strColor  == "orange") {unHash = 1 + 8 * BUCKET_SIZE;}
+   else if(strColor  == "brown") {unHash = 1 + 9 * BUCKET_SIZE;}
+   else if(strColor  == "purple") {unHash = 1 + 10 * BUCKET_SIZE;}
+   else if(strColor  ==  "gray50") {unHash = 1 + 11 * BUCKET_SIZE;}
+   else  unHash = 0;
+
+   /* Unique tuple identifier based on robot id and 
+      tuple count */
+   ++unTupleCount;
+   uint32_t unIdentifier = ((uint32_t) unRobotId << 16) + unTupleCount;
+   
+   return swarmmesh::SKey(unHash, unIdentifier);
+}
 
 // /* Key partitioning function by degree (D) and memory (M) */
 // class PartitionDM : public CSwarmMesh<SEventData>::Partition {
@@ -91,6 +81,14 @@ swarmmesh::SKey HashEventDataType(SEventData& s_value) {
 //       if(un_degree == 0) return un_mem;
 //       return un_degree * un_mem; 
 //    };
+
+/****************************************/
+/****************************************/
+
+void CMySwarmMesh::Init(uint16_t unRId) {
+   hashEvent.Init(unRId);
+   CSwarmMesh::Init(unRId, hashEvent); 
+}
 
 
 /****************************************/

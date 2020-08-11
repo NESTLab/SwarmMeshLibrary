@@ -173,7 +173,10 @@ namespace swarmmesh {
 
    public:
 
-      void Init(uint16_t unRId) {m_unRId = unRId;}
+      void Init(uint16_t unRId, std::function<SKey(T&)> fun_hash) {
+         m_unRId = unRId;
+         m_funHash = fun_hash;
+      }
 
    public:
 
@@ -333,11 +336,9 @@ namespace swarmmesh {
    public:
 
       CSwarmMesh(std::function < T(const std::vector<uint8_t>&, size_t&) > fun_unpack,
-                 std::function < void(std::vector<uint8_t>&, const T&) > fun_pack,
-                 std::function < SKey(T&) > fun_hash ) :
+                 std::function < void(std::vector<uint8_t>&, const T&) > fun_pack) :
          m_funUnpack(fun_unpack),
-         m_funPack(fun_pack),
-         m_funHash(fun_hash) {
+         m_funPack(fun_pack) {
             /* initialize random seed: */
             srand(0);
          }
