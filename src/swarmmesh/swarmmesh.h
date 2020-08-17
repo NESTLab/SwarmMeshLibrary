@@ -10,6 +10,7 @@
 #include <map>
 #include <algorithm>
 #include <iostream>
+#include <any>
 
 const static uint16_t MEMORY_CAPACITY = 10;
 const static uint16_t ROUTING_CAPACITY = 10;
@@ -284,6 +285,13 @@ namespace swarmmesh {
           * @return true if the tuple passes the test, false otherwise.
           */
          virtual bool operator()(const STuple& t_tuple) = 0;
+
+         /**
+          * Initialize filter parameters.
+          * @param filter_params Filter_ Parameters
+          * @return void
+          */
+         virtual void Init(std::unordered_map<std::string, std::any> filter_params) = 0;
       };
 
       /****************************************/
@@ -427,7 +435,18 @@ namespace swarmmesh {
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
                break;
             case MSG_OP_FILTER:
-               /* TODO */
+               for (auto i = rangeMsg.first; i != rangeMsg.second; ++i) {
+                  /* Set message type */
+                  PackUInt8(vec_buffer, (uint8_t) eMsgType);
+                  /* Set filter type */
+                  uint16_t filterType = i->second.filterType;
+                  PackUInt16(vec_buffer, filterType);
+                  /* Create filter with filter parameters */
+                  CFilterOperation* pcFilterOp = m_cFilters.New(filterType);
+                  pcFilterOp->Init(i->second.m_filterParameters);
+                  /* Serialize filter */
+                  pcFilterOp->Serialize(vec_buffer);
+               }
                break;
             case MSG_OP_TUPLE:
                /* TODO */
@@ -480,8 +499,8 @@ namespace swarmmesh {
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
                   /* Go! */
                   std::vector<STuple> vecResult;
-                  Filter(vecResult, *pcFilterOp, m_vecStoredTuples);
-                  Filter(vecResult, *pcFilterOp, m_vecRoutingTuples);
+                  Filter_(vecResult, *pcFilterOp, m_vecStoredTuples);
+                  Filter_(vecResult, *pcFilterOp, m_vecRoutingTuples);
                   // TODO do something with vecResult
                   delete pcFilterOp;
                   break;
@@ -497,8 +516,8 @@ namespace swarmmesh {
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
                   /* Go! */
                   std::vector<STuple> vecFiltered;
-                  Filter(vecFiltered, *pcFilterOp, m_vecStoredTuples);
-                  Filter(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
+                  Filter_(vecFiltered, *pcFilterOp, m_vecStoredTuples);
+                  Filter_(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
                   std::vector<STuple> vecResult;
                   Exec(vecResult, *pcTupleOp, vecFiltered);
                   // TODO do something with vecResult
@@ -518,8 +537,8 @@ namespace swarmmesh {
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
                   /* Go! */
                   std::vector<STuple> vecFiltered;
-                  Filter(vecFiltered, *pcFilterOp, m_vecStoredTuples);
-                  Filter(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
+                  Filter_(vecFiltered, *pcFilterOp, m_vecStoredTuples);
+                  Filter_(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
                   T tResult;
                   Exec(tResult, *pcAggregateOp, vecFiltered);
                   /* Cleanup */
@@ -544,7 +563,7 @@ namespace swarmmesh {
        * @param c_filter   The filter to apply.
        * @return The final list of tuples that pass the filter.
        */
-      std::vector<STuple>& Filter(std::vector<STuple>& vec_result,
+      std::vector<STuple>& Filter_(std::vector<STuple>& vec_result,
                                   CFilterOperation& c_filter,
                                   const std::vector<STuple>& vec_tuples) {
          for(auto t_tuple : vec_tuples) {
@@ -581,6 +600,15 @@ namespace swarmmesh {
          for(auto t_tuple : vec_tuples)
             t_result = c_op(t_result, t_tuple);
          return t_result;
+      }
+
+      /**
+       * User-facing Filter function
+       */
+      void Filter(uint16_t type, std::unordered_map<std::string, std::any> filter_params) {
+         SMsg msg;
+         msg.SetFilterParameters(type, filter_params);
+         m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, msg));
       }
 
       /**
@@ -812,12 +840,27 @@ namespace swarmmesh {
          
          uint16_t destination;
          STuple msg;
+
+         /**
+          * Map of filter parameters for the FILTER operation
+          */
+         std::unordered_map<std::string, std::any> m_filterParameters;
+
+         /**
+          * Type of filter
+          */
+         uint16_t filterType;
          /* Default Constructor */
          SMsg() {}
          /* Constructor */
          SMsg(STuple tuple, uint16_t id = 0):
             msg(tuple),
             destination(id) {}
+         
+         void SetFilterParameters(uint16_t type, std::unordered_map<std::string, std::any> params) {
+            filterType = type;
+            m_filterParameters = params;
+         }
       };
 
       /**

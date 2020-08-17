@@ -1,7 +1,6 @@
 # cmake_minimum_required(VERSION 3.3)
 
 # project(SwarmMeshLibrary)
-set(CMAKE_CXX_STANDARD 11)
 
 # function(my_export_target _target _include_dir)
 #     file(
@@ -25,6 +24,8 @@ set(CMAKE_CXX_STANDARD 11)
 add_library(swarm_mesh_library SHARED
 swarmmesh.h swarmmesh.cpp
 )
+set_target_properties(swarm_mesh_library PROPERTIES CXX_STANDARD 17)
+target_compile_features(swarm_mesh_library PUBLIC cxx_std_17)
 
 # message("${CMAKE_CURRENT_SOURCE_DIR}")
 

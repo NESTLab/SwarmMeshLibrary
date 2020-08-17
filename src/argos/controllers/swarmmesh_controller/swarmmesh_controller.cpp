@@ -94,6 +94,75 @@ void CMySwarmMesh::Init(uint16_t unRId) {
 /****************************************/
 /****************************************/
 
+void CTypeFilter::Init(std::unordered_map<std::string, std::any> filter_params) {
+   eventType = std::any_cast<std::string>(filter_params["type"]);
+}
+
+bool CTypeFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& tuple) {
+   return tuple.Value.type == eventType;
+}
+
+void CTypeFilter::Serialize(std::vector<uint8_t>& vec_buffer) {
+   swarmmesh::PackString(vec_buffer, eventType);
+}
+
+size_t CTypeFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) {
+   eventType = swarmmesh::UnpackString(vec_buffer, un_offset);
+   return un_offset;
+}
+
+/****************************************/
+/****************************************/
+
+void CLocationFilter::Init(std::unordered_map<std::string, std::any> filter_params) {
+   radius = std::any_cast<float>(filter_params["radius"]);
+   eventLocation = std::any_cast<std::pair<float, float> >(filter_params["location"]);
+}
+
+bool CLocationFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& tuple) {
+   CVector2 eventCoord = CVector2(eventLocation.first, eventLocation.second);
+   CVector2 tupleCoord = CVector2(tuple.Value.location.first, tuple.Value.location.second);
+
+   return SquareDistance(eventCoord, tupleCoord) <= radius;
+}
+
+void CLocationFilter::Serialize(std::vector<uint8_t>& vec_buffer) {
+   swarmmesh::PackFloat(vec_buffer, radius);
+   swarmmesh::PackFloat(vec_buffer, eventLocation.first);
+   swarmmesh::PackFloat(vec_buffer, eventLocation.second);
+}
+
+size_t CLocationFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) {
+   radius = swarmmesh::UnpackFloat(vec_buffer, un_offset);
+   eventLocation = std::make_pair(swarmmesh::UnpackFloat(vec_buffer, un_offset),
+                                    swarmmesh::UnpackFloat(vec_buffer, un_offset));
+   return un_offset;
+}
+
+/****************************************/
+/****************************************/
+
+void CIdentifierFilter::Init(std::unordered_map<std::string, std::any> filter_params) {
+   eventIdentifier = std::any_cast<uint32_t>(filter_params["identifier"]);
+}
+
+bool CIdentifierFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& tuple) {
+   return eventIdentifier == tuple.Key.Identifier;
+}
+
+void CIdentifierFilter::Serialize(std::vector<uint8_t>& vec_buffer) {
+   swarmmesh::PackUInt32(vec_buffer, eventIdentifier);
+}
+
+size_t CIdentifierFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) {
+   eventIdentifier = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
+
+   return un_offset;
+}
+
+/****************************************/
+/****************************************/
+
 CSwarmMeshController::CSwarmMeshController() :
    m_pcWheels(NULL),
    m_pcProximity(NULL),
@@ -195,6 +264,36 @@ void CSwarmMeshController::ControlStep()
 
    /* Tell SwarmMesh to queue messages for routing data */
    m_cMySM.Route();
+
+   /* Randomly add Filter messages */
+   float p = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
+   if (p < 0.2) {
+      /* Filter type */
+      int type = std::rand() % 3;
+      std::unordered_map<std::string, std::any> filter_params;
+
+      /* Assign parameters based on type */
+      switch (type) {
+      case 0:
+         filter_params["type"] = std::string("blue");
+         break;
+      case 1: {
+         float radius = 4.5f;
+         std::pair<float, float> location = std::make_pair(10.0f, 10.0f);
+         filter_params["radius"] = radius;
+         filter_params["location"] = location;
+         break;
+      }
+      case 2:
+         uint32_t identifier = 32768;
+         filter_params["identifier"] = identifier;
+         break;
+      
+      // default: throw THROW_ARGOSEXCEPTION("Invalid filter type : ");
+         // break;
+      }
+      m_cMySM.Filter((uint16_t) type, filter_params);
+   }
 
    /* Process outgoing messages */
    ProcessOutMsgs();

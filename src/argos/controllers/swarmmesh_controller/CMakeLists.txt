@@ -4,3 +4,7 @@ target_link_libraries(swarmmesh_controller
   argos3plugin_simulator_footbot
   argos3plugin_simulator_genericrobot
   swarm_mesh_library)
+
+
+set_target_properties(swarmmesh_controller PROPERTIES CXX_STANDARD 17)
+target_compile_features(swarmmesh_controller PUBLIC cxx_std_17)

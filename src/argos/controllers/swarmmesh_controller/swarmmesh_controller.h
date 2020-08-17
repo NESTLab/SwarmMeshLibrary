@@ -18,6 +18,9 @@
 
 #include <queue>
 #include <sstream>
+#include <any>
+#include <typeinfo>
+#include <typeindex>
 
 /* TODO: make this configurable */
 const uint16_t BUCKET_SIZE = 10;
@@ -29,7 +32,9 @@ const argos::Real BLOB_SENSOR_RANGE = 100;
 class CMySwarmMesh;
 class CSwarmMeshController;
 class HashEventDataType;
-// class CMyFilter;
+class CTypeFilter;
+class CLocationFilter;
+class CIdentifierFilter;
 // class CMySum;
 
 /****************************************/
@@ -78,13 +83,67 @@ class CMySwarmMesh : public swarmmesh::CSwarmMesh<SEventData> {
 public:
    CMySwarmMesh() :
       CSwarmMesh(UnpackEventDataType,
-                 PackEventDataType) {}
+                 PackEventDataType) {
+                    RegisterFilter<CTypeFilter>(this);
+                    RegisterFilter<CLocationFilter>(this);
+                    RegisterFilter<CIdentifierFilter>(this);
+                 }
    void Init(uint16_t unRId);
    
    ~CMySwarmMesh() {
    }
 
 };
+
+/****************************************/
+/****************************************/
+/* User Defined Filters */
+
+class CTypeFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
+   private:
+      std::string eventType;
+   public: 
+      CTypeFilter(swarmmesh::CSwarmMesh<SEventData>* pc_sm) : 
+         swarmmesh::CSwarmMesh<SEventData>::CFilterOperation(pc_sm) {}
+      
+      ~CTypeFilter() {}
+      bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
+      void Serialize(std::vector<uint8_t>&) override;
+      size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
+      void Init(std::unordered_map<std::string, std::any> filter_params) override;
+};
+
+class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
+   private:
+      std::pair<float, float> eventLocation;
+      float radius;
+   public: 
+      CLocationFilter(swarmmesh::CSwarmMesh<SEventData>* pc_sm) : 
+         swarmmesh::CSwarmMesh<SEventData>::CFilterOperation(pc_sm) {}
+      
+      ~CLocationFilter() {}
+      bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
+      void Serialize(std::vector<uint8_t>&) override;
+      size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
+      void Init(std::unordered_map<std::string, std::any> filter_params) override;
+};
+
+class CIdentifierFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
+   private:
+      uint32_t eventIdentifier;
+   public: 
+      CIdentifierFilter(swarmmesh::CSwarmMesh<SEventData>* pc_sm) : 
+         swarmmesh::CSwarmMesh<SEventData>::CFilterOperation(pc_sm) {}
+      
+      ~CIdentifierFilter() {}
+      bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
+      void Serialize(std::vector<uint8_t>&) override;
+      size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
+      void Init(std::unordered_map<std::string, std::any> filter_params) override;
+};
+
+/****************************************/
+/****************************************/
 
 using namespace argos;
 

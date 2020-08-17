@@ -72,8 +72,8 @@ public:
       m_unSquareRange = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
       return un_offset;
    }
-   void SetThreshold(uint32_t un_square_range) {
-      m_unSquareRange = un_square_range;
+   void Init(std::unordered_map<std::string, std::any> filter_params) override {
+      m_unSquareRange = std::any_cast<uint32_t>(filter_params["range"]);
    }
 private:
    uint32_t m_unSquareRange;
