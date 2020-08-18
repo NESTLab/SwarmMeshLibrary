@@ -103,7 +103,7 @@ std::string swarmmesh::UnpackString(const std::vector<uint8_t>& vec_buffer, size
     if(swarmmesh::UnpackValid(vec_buffer, un_offset, unLength)) {
         std::string strReturn;
         for(size_t i = 0; i < unLength; ++i) {
-        strReturn += vec_buffer[un_offset++];
+          strReturn += vec_buffer[un_offset++];
         }
         return strReturn;
     }         

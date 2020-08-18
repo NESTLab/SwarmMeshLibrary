@@ -36,14 +36,14 @@ namespace swarmmesh {
       SKey() {}
       
       /* Constructor */
-      SKey(uint32_t h, uint32_t i): 
-      Hash(h),
-      Identifier(i) {}
+      SKey(uint32_t un_hash, uint32_t un_identifier): 
+      Hash(un_hash),
+      Identifier(un_identifier) {}
 
       /* Copy operator */
-      SKey& operator=(const SKey& x) {
-         Hash = x.Hash;
-         Identifier = x.Identifier;
+      SKey& operator=(const SKey& s_key) {
+         Hash = s_key.Hash;
+         Identifier = s_key.Identifier;
          return *this;
       }
    };
@@ -174,8 +174,8 @@ namespace swarmmesh {
 
    public:
 
-      void Init(uint16_t unRId, std::function<SKey(T&)> fun_hash) {
-         m_unRId = unRId;
+      void Init(uint16_t un_robot_id, std::function<SKey(T&)> fun_hash) {
+         m_unRId = un_robot_id;
          m_funHash = fun_hash;
       }
 
@@ -190,26 +190,27 @@ namespace swarmmesh {
          T Value;
 
          /* Copy operator */
-         STuple& operator=(const STuple& x) {
-            Key = x.Key;
-            Value = x.Value;
+         STuple& operator=(const STuple& s_tuple) {
+            Key = s_tuple.Key;
+            Value = s_tuple.Value;
             return *this;
          }
 
          /* Equality operator */
-         bool operator==(const STuple& x) {
-            return (Key.Identifier == x.Key.Identifier);}
+         bool operator==(const STuple& s_tuple) {
+            return (Key.Identifier == s_tuple.Key.Identifier);
+         }
 
       };
 
       /* Predicate for sorting tuples */
       struct TupleLess
       {
-         bool operator()(const STuple& x, const STuple& y) const {
-            if (x.Key.Hash < y.Key.Hash)
+         bool operator()(const STuple& s_x, const STuple& s_y) const {
+            if (s_x.Key.Hash < s_y.Key.Hash)
                   return true;
-            else if (x.Key.Hash == y.Key.Hash)
-                  return x.Key.Identifier < y.Key.Identifier;
+            else if (s_x.Key.Hash == s_y.Key.Hash)
+                  return s_x.Key.Identifier < s_y.Key.Identifier;
             return false;
          }
       };
@@ -217,12 +218,12 @@ namespace swarmmesh {
       /* Predicate for sorting tuples */
       struct TupleGreater
       {
-         bool operator()(const STuple& x, const STuple& y) const {
-               if (x.Key.Hash > y.Key.Hash)
-                  return true;
-               else if (x.Key.Hash == y.Key.Hash)
-                  return x.Key.Identifier > y.Key.Identifier;
-               return false;
+         bool operator()(const STuple& s_x, const STuple& s_y) const {
+            if (s_x.Key.Hash > s_y.Key.Hash)
+               return true;
+            else if (s_x.Key.Hash == s_y.Key.Hash)
+               return s_x.Key.Identifier > s_y.Key.Identifier;
+            return false;
          }
       };
 
@@ -237,9 +238,9 @@ namespace swarmmesh {
 
          SNeighbor() {}
 
-         SNeighbor(float d, float a):
-         Distance(d),
-         Azimuth(a){}
+         SNeighbor(float f_distance, float f_azimuth):
+         Distance(f_distance),
+         Azimuth(f_azimuth){}
 
       };
 
@@ -281,17 +282,17 @@ namespace swarmmesh {
 
          /**
           * The application operator.
-          * @param t_tuple The tuple to test.
+          * @param s_tuple The tuple to test.
           * @return true if the tuple passes the test, false otherwise.
           */
-         virtual bool operator()(const STuple& t_tuple) = 0;
+         virtual bool operator()(const STuple& s_tuple) = 0;
 
          /**
           * Initialize filter parameters.
-          * @param filter_params Filter_ Parameters
+          * @param map_filter_params Filter Parameters
           * @return void
           */
-         virtual void Init(std::unordered_map<std::string, std::any> filter_params) = 0;
+         virtual void Init(std::unordered_map<std::string, std::any>& map_filter_params) = 0;
       };
 
       /****************************************/
@@ -309,10 +310,10 @@ namespace swarmmesh {
 
          /**
           * The application operator.
-          * @param t_tuple The tuple to transform.
+          * @param s_tuple The tuple to transform.
           * @return The transformed tuple.
           */
-         virtual STuple operator()(const STuple& t_tuple) = 0;
+         virtual STuple operator()(const STuple& s_tuple) = 0;
       };
 
       /****************************************/
@@ -331,11 +332,11 @@ namespace swarmmesh {
          /**
           * The application operator.
           * @param t_accumulated The aggregated value so far.
-          * @param t_current     The current tuple to aggregate.
+          * @param s_current     The current tuple to aggregate.
           * @return The new aggregated tuple.
           */
          virtual T operator()(const T& t_aggregated,
-                              const STuple& t_current) = 0;
+                              const STuple& s_current) = 0;
       };
 
    /****************************************/
@@ -375,8 +376,8 @@ namespace swarmmesh {
       }
 
       /* Add new neighbor */
-      void AddNeighbor(uint16_t un_RId, float f_distance, float f_azimuth) {
-         m_mapNeighbors[un_RId] = SNeighbor(f_distance, f_azimuth);
+      void AddNeighbor(uint16_t un_robot_id, float f_distance, float f_azimuth) {
+         m_mapNeighbors[un_robot_id] = SNeighbor(f_distance, f_azimuth);
       }
 
       /* Compute Node ID 
@@ -388,17 +389,17 @@ namespace swarmmesh {
          /* Get available storage memory */
          size_t unFreeMemory = MEMORY_CAPACITY - m_vecStoredTuples.size();
          /* Return node id given current neighbor list and storage memory */
-         uint32_t res = (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
-         return res;
+         uint32_t unRes = (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
+         return unRes;
       }
 
       /* Check if this tuple can be stored */
-      bool IsStorableTuple(STuple s_tuple, uint32_t unNodeId) {
+      bool IsStorableTuple(STuple s_tuple, uint32_t un_node_id) {
          /* Get degree in communication graph */
          size_t unNumNeighbors = m_mapNeighbors.size();
          /* Storable if node id higher than hash 
             if storing it */
-         return s_tuple.Key.Hash < (unNodeId - unNumNeighbors);
+         return s_tuple.Key.Hash < (un_node_id - unNumNeighbors);
       }
 
       void Serialize(std::vector<uint8_t>& vec_buffer) override {
@@ -425,7 +426,7 @@ namespace swarmmesh {
                   /* Set message type */
                   PackUInt8(vec_buffer, (uint8_t) eMsgType);
                   /* Get messages from map */
-                  STuple sTuple = i->second.msg;
+                  STuple sTuple = i->second.Msg;
                   /* Serialize */
                   m_funPack(vec_buffer, sTuple.Value);
                }
@@ -439,11 +440,15 @@ namespace swarmmesh {
                   /* Set message type */
                   PackUInt8(vec_buffer, (uint8_t) eMsgType);
                   /* Set filter type */
-                  uint16_t filterType = i->second.filterType;
-                  PackUInt16(vec_buffer, filterType);
+                  uint16_t unFilterType = i->second.FilterType;
+                  PackUInt16(vec_buffer, unFilterType);
                   /* Create filter with filter parameters */
-                  CFilterOperation* pcFilterOp = m_cFilters.New(filterType);
-                  pcFilterOp->Init(i->second.m_filterParameters);
+                  CFilterOperation* pcFilterOp = m_cFilters.New(unFilterType);
+                  try {
+                     pcFilterOp->Init(i->second.FilterParameters);
+                  } catch (const std::out_of_range& e) {
+                     throw CSwarmMeshException("Filter initialization failed ", e.what());
+                  }
                   /* Serialize filter */
                   pcFilterOp->Serialize(vec_buffer);
                }
@@ -479,13 +484,13 @@ namespace swarmmesh {
                   break;
                }
                case MSG_OP_PUT: {
-                  return un_offset;
+                  // return un_offset;
                   /* Create the tuple */
                   STuple sTuple;
                   sTuple.Value = m_funUnpack(vec_buffer, un_offset);
                   sTuple.Key = m_funHash(sTuple.Value);
                   /* Perform put operation */
-                  _Put(sTuple);
+                  DoPut(sTuple);
                   break;
                }
                case MSG_OP_ERASE: {
@@ -499,8 +504,8 @@ namespace swarmmesh {
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
                   /* Go! */
                   std::vector<STuple> vecResult;
-                  Filter_(vecResult, *pcFilterOp, m_vecStoredTuples);
-                  Filter_(vecResult, *pcFilterOp, m_vecRoutingTuples);
+                  DoFilter(vecResult, *pcFilterOp, m_vecStoredTuples);
+                  DoFilter(vecResult, *pcFilterOp, m_vecRoutingTuples);
                   // TODO do something with vecResult
                   delete pcFilterOp;
                   break;
@@ -516,8 +521,8 @@ namespace swarmmesh {
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
                   /* Go! */
                   std::vector<STuple> vecFiltered;
-                  Filter_(vecFiltered, *pcFilterOp, m_vecStoredTuples);
-                  Filter_(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
+                  DoFilter(vecFiltered, *pcFilterOp, m_vecStoredTuples);
+                  DoFilter(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
                   std::vector<STuple> vecResult;
                   Exec(vecResult, *pcTupleOp, vecFiltered);
                   // TODO do something with vecResult
@@ -537,8 +542,8 @@ namespace swarmmesh {
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
                   /* Go! */
                   std::vector<STuple> vecFiltered;
-                  Filter_(vecFiltered, *pcFilterOp, m_vecStoredTuples);
-                  Filter_(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
+                  DoFilter(vecFiltered, *pcFilterOp, m_vecStoredTuples);
+                  DoFilter(vecFiltered, *pcFilterOp, m_vecRoutingTuples);
                   T tResult;
                   Exec(tResult, *pcAggregateOp, vecFiltered);
                   /* Cleanup */
@@ -548,7 +553,7 @@ namespace swarmmesh {
                }
                default: {
                   return un_offset;
-                  //throw CSwarmMeshException("Unknown message type ", unMsgType, " at offset ", un_offset);
+                  // throw CSwarmMeshException("Unknown message type ", unMsgType, " at offset ", un_offset);
                }
             } // switch(unMsgType)
          } // while(un_offset < vec_buffer.size())
@@ -556,58 +561,11 @@ namespace swarmmesh {
       }
 
       /**
-       * Filters the given tuples.
-       *
-       * @param vec_result The list of tuples that passed the filter so far.
-       * @param vec_tuples The tuples to filter.
-       * @param c_filter   The filter to apply.
-       * @return The final list of tuples that pass the filter.
-       */
-      std::vector<STuple>& Filter_(std::vector<STuple>& vec_result,
-                                  CFilterOperation& c_filter,
-                                  const std::vector<STuple>& vec_tuples) {
-         for(auto t_tuple : vec_tuples) {
-            if(c_filter(t_tuple))
-               vec_result.push_back(t_tuple);
-         }
-         return vec_result;
-      }
-
-      /**
-       * Executes the given tuple operation on a list of tuples.
-       * @param c_op       The operation.
-       * @param vec_tuples The tuples on which the operation is applied.
-       * @return A list of transformed tuple.
-       */
-      std::vector<STuple>& Exec(std::vector<STuple>& vec_result,
-                                CTupleOperation& c_op,
-                                const std::vector<STuple>& vec_tuples) {
-         for(auto t_tuple : vec_tuples)
-            vec_result.push_back(c_op(t_tuple));
-         return vec_result;
-      }
-
-      /**
-       * Executes the given aggregate operation on a list of tuples.
-       * @param t_result   The aggregated result so far.
-       * @param c_op       The operation.
-       * @param vec_tuples The tuples on which the operation is applied.
-       * @return The aggregated tuple.
-       */
-      T Exec(T& t_result,
-             CAggregateOperation& c_op,
-             const std::vector<STuple>& vec_tuples) {
-         for(auto t_tuple : vec_tuples)
-            t_result = c_op(t_result, t_tuple);
-         return t_result;
-      }
-
-      /**
        * User-facing Filter function
        */
-      void Filter(uint16_t type, std::unordered_map<std::string, std::any> filter_params) {
+      void Filter(uint16_t un_type, std::unordered_map<std::string, std::any>& map_filter_params) {
          SMsg msg;
-         msg.SetFilterParameters(type, filter_params);
+         msg.SetFilterParameters(un_type, map_filter_params);
          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, msg));
       }
 
@@ -622,50 +580,14 @@ namespace swarmmesh {
          m_funPack(vec_buffer, t_data);
          /* Create tuple */
          STuple sTuple;
-         size_t offset = 0;
-         sTuple.Value = m_funUnpack(vec_buffer, offset);
+         size_t unOffset = 0;
+         sTuple.Value = m_funUnpack(vec_buffer, unOffset);
          sTuple.Key = m_funHash(sTuple.Value);
          /* Call put operation on tuple */
-         _Put(sTuple);
+         DoPut(sTuple);
       }
    
-      /**
-       * Put operation
-       */
-      void _Put(const STuple& s_tuple) {
-         
-         /* Compute current Node Id */
-         uint32_t unNodeId = Partition();
-         /* Decide whether to store tuple or route it */
-         bool bKeep = IsStorableTuple(s_tuple, unNodeId);
-         if(bKeep) {
-            /* Put tuple in storage queue, hash descending order */
-            insert_sorted(m_vecStoredTuples, s_tuple, TupleGreater());
-            uint32_t unHighestHash = (m_vecStoredTuples.front()).Key.Hash;
-            /* Move unstorable tuples to routing queue */
-            while((!m_vecStoredTuples.empty()) &&
-                  (Partition() < unHighestHash || 
-                  m_vecStoredTuples.size() > MEMORY_CAPACITY))
-            {
-               /* Put lowest hash tuple in routing queue, hash ascending order */
-               insert_sorted(m_vecRoutingTuples, m_vecStoredTuples.back(), TupleLess());
-               /* Remove tuple from stored tuples */
-               m_vecStoredTuples.pop_back();
-            }
-         }
-         else {
-            /* Put tuple in routing queue, hash ascending order */
-            insert_sorted(m_vecRoutingTuples, s_tuple, TupleLess());
-         }
 
-         /* Discard tuples if total size exceeded */
-         while(m_vecStoredTuples.size() + m_vecRoutingTuples.size() > MEMORY_CAPACITY + ROUTING_CAPACITY)
-         {
-            /* Discard highest hash tuple */
-            m_vecRoutingTuples.pop_back();
-            /* TODO: add log message or buffer of discarded tuples */
-         }
-      }
 
       /**
        * Queue messages to send to neighbors.
@@ -751,6 +673,93 @@ namespace swarmmesh {
    private:
 
       /**
+       * Executes the given tuple operation on a list of tuples.
+       * @param c_op       The operation.
+       * @param vec_tuples The tuples on which the operation is applied.
+       * @return A list of transformed tuple.
+       */
+      std::vector<STuple>& Exec(std::vector<STuple>& vec_result,
+                                CTupleOperation& c_op,
+                                const std::vector<STuple>& vec_tuples) {
+         for(auto t_tuple : vec_tuples)
+            vec_result.push_back(c_op(t_tuple));
+         return vec_result;
+      }
+
+      /**
+       * Executes the given aggregate operation on a list of tuples.
+       * @param t_result   The aggregated result so far.
+       * @param c_op       The operation.
+       * @param vec_tuples The tuples on which the operation is applied.
+       * @return The aggregated tuple.
+       */
+      T Exec(T& t_result,
+             CAggregateOperation& c_op,
+             const std::vector<STuple>& vec_tuples) {
+         for(auto t_tuple : vec_tuples)
+            t_result = c_op(t_result, t_tuple);
+         return t_result;
+      }
+
+      /**
+       * Filters the given tuples.
+       *
+       * @param vec_result The list of tuples that passed the filter so far.
+       * @param vec_tuples The tuples to filter.
+       * @param c_filter   The filter to apply.
+       * @return The final list of tuples that pass the filter.
+       */
+      std::vector<STuple>& DoFilter(std::vector<STuple>& vec_result,
+                                  CFilterOperation& c_filter,
+                                  const std::vector<STuple>& vec_tuples) {
+         for(auto t_tuple : vec_tuples) {
+            if(c_filter(t_tuple))
+               vec_result.push_back(t_tuple);
+         }
+         return vec_result;
+      }
+
+      /**
+       * Put operation
+       */
+      void DoPut(const STuple& s_tuple) {
+         
+         /* Compute current Node Id */
+         uint32_t unNodeId = Partition();
+         /* Decide whether to store tuple or route it */
+         bool bKeep = IsStorableTuple(s_tuple, unNodeId);
+         if(bKeep) {
+            /* Put tuple in storage queue, hash descending order */
+            insert_sorted(m_vecStoredTuples, s_tuple, TupleGreater());
+            uint32_t unHighestHash = (m_vecStoredTuples.front()).Key.Hash;
+            /* Move unstorable tuples to routing queue */
+            while((!m_vecStoredTuples.empty()) &&
+                  (Partition() < unHighestHash || 
+                  m_vecStoredTuples.size() > MEMORY_CAPACITY))
+            {
+               /* Put lowest hash tuple in routing queue, hash ascending order */
+               insert_sorted(m_vecRoutingTuples, m_vecStoredTuples.back(), TupleLess());
+               /* Remove tuple from stored tuples */
+               m_vecStoredTuples.pop_back();
+            }
+         }
+         else {
+            /* Put tuple in routing queue, hash ascending order */
+            insert_sorted(m_vecRoutingTuples, s_tuple, TupleLess());
+         }
+
+         /* Discard tuples if total size exceeded */
+         while(m_vecStoredTuples.size() + m_vecRoutingTuples.size() > MEMORY_CAPACITY + ROUTING_CAPACITY)
+         {
+            /* Discard highest hash tuple */
+            m_vecRoutingTuples.pop_back();
+            /* TODO: add log message or buffer of discarded tuples */
+         }
+      }
+
+   private:
+
+      /**
        * A factory to register and create operations on tuples.
        */
       template<class C>
@@ -828,38 +837,38 @@ namespace swarmmesh {
 
       enum EMsgType {
          MSG_NGHBRS = 1,
-         MSG_OP_PUT = 2,
-         MSG_OP_ERASE = 3,
-         MSG_OP_FILTER = 4,
-         MSG_OP_TUPLE = 5,
-         MSG_OP_AGGREGATE = 6,
-         MSG_NUM = 7
+         MSG_OP_PUT,
+         MSG_OP_ERASE,
+         MSG_OP_FILTER,
+         MSG_OP_TUPLE,
+         MSG_OP_AGGREGATE,
+         MSG_NUM
       };
 
       struct SMsg {
          
-         uint16_t destination;
-         STuple msg;
+         uint16_t Destination;
+         STuple Msg;
 
          /**
           * Map of filter parameters for the FILTER operation
           */
-         std::unordered_map<std::string, std::any> m_filterParameters;
+         std::unordered_map<std::string, std::any> FilterParameters;
 
          /**
           * Type of filter
           */
-         uint16_t filterType;
+         uint16_t FilterType;
          /* Default Constructor */
          SMsg() {}
          /* Constructor */
-         SMsg(STuple tuple, uint16_t id = 0):
-            msg(tuple),
-            destination(id) {}
+         SMsg(STuple s_tuple, uint16_t un_id = 0):
+            Msg(s_tuple),
+            Destination(un_id) {}
          
-         void SetFilterParameters(uint16_t type, std::unordered_map<std::string, std::any> params) {
-            filterType = type;
-            m_filterParameters = params;
+         void SetFilterParameters(uint16_t un_filter_type, std::unordered_map<std::string, std::any>& un_filter_params) {
+            FilterType = un_filter_type;
+            FilterParameters = un_filter_params;
          }
       };
 
@@ -868,8 +877,6 @@ namespace swarmmesh {
        * Map ordered by message type
        */
       std::multimap<EMsgType, SMsg> m_queueOutMsgs;
-
-   private:
 
       /**
        * The hash function.

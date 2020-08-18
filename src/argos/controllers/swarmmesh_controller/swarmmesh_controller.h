@@ -31,7 +31,7 @@ const argos::Real BLOB_SENSOR_RANGE = 100;
 
 class CMySwarmMesh;
 class CSwarmMeshController;
-class HashEventDataType;
+class CHashEventDataType;
 class CTypeFilter;
 class CLocationFilter;
 class CIdentifierFilter;
@@ -40,14 +40,33 @@ class CIdentifierFilter;
 /****************************************/
 /****************************************/
 
+/* Structure representing location */
+struct SLocation {
+   float X;
+   float Y;
+
+   /* Default constructor */
+   SLocation() {}
+
+   /* Parameterized constructor */
+   SLocation(float f_x, float f_y) : X(f_x), Y(f_y) {}
+
+   /* Copy operator */
+      SLocation& operator=(const SLocation& s_location) {
+         X = s_location.X;
+         Y = s_location.Y;
+         return *this;
+      }
+};
+
 /* Structure representing events */
 struct SEventData {
    /* Type of event encoded as a color */
-   std::string type;
+   std::string Type;
    /* Value associated to the event */
-   float payload;
+   float Payload;
    /* Spatial location of the event */
-   std::pair<float, float> location;
+   SLocation Location;
 };
 
 /****************************************/
@@ -62,24 +81,26 @@ void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_val
 /****************************************/
 /****************************************/
 
-class HashEventDataType {
+class CHashEventDataType {
 
    private:
-   uint16_t unRobotId = 0;
-   uint16_t unTupleCount = 0;
+   uint16_t m_unRobotId = 0;
+   uint16_t m_unTupleCount = 0;
    
 
    public:
-      HashEventDataType() : 
-         unRobotId(0),
-         unTupleCount(0) {}
+      CHashEventDataType() : 
+         m_unRobotId(0),
+         m_unTupleCount(0) {}
 
-      void Init(uint16_t unRId) {unRobotId = unRId;}
+      void Init(uint16_t un_robot_id) {m_unRobotId = un_robot_id;}
       swarmmesh::SKey operator()(SEventData& s_value);
 };
 
 class CMySwarmMesh : public swarmmesh::CSwarmMesh<SEventData> {
-   HashEventDataType hashEvent;
+private:
+   CHashEventDataType m_cHashEvent;
+
 public:
    CMySwarmMesh() :
       CSwarmMesh(UnpackEventDataType,
@@ -88,7 +109,7 @@ public:
                     RegisterFilter<CLocationFilter>(this);
                     RegisterFilter<CIdentifierFilter>(this);
                  }
-   void Init(uint16_t unRId);
+   void Init(uint16_t un_robot_id);
    
    ~CMySwarmMesh() {
    }
@@ -101,7 +122,7 @@ public:
 
 class CTypeFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
    private:
-      std::string eventType;
+      std::string m_strEventType;
    public: 
       CTypeFilter(swarmmesh::CSwarmMesh<SEventData>* pc_sm) : 
          swarmmesh::CSwarmMesh<SEventData>::CFilterOperation(pc_sm) {}
@@ -110,13 +131,13 @@ class CTypeFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
       bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
       void Serialize(std::vector<uint8_t>&) override;
       size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
-      void Init(std::unordered_map<std::string, std::any> filter_params) override;
+      void Init(std::unordered_map<std::string, std::any>&) override;
 };
 
 class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
    private:
-      std::pair<float, float> eventLocation;
-      float radius;
+      SLocation m_sEventLocation;
+      float m_fRadius;
    public: 
       CLocationFilter(swarmmesh::CSwarmMesh<SEventData>* pc_sm) : 
          swarmmesh::CSwarmMesh<SEventData>::CFilterOperation(pc_sm) {}
@@ -125,12 +146,12 @@ class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperati
       bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
       void Serialize(std::vector<uint8_t>&) override;
       size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
-      void Init(std::unordered_map<std::string, std::any> filter_params) override;
+      void Init(std::unordered_map<std::string, std::any>&) override;
 };
 
 class CIdentifierFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
    private:
-      uint32_t eventIdentifier;
+      uint32_t m_unEventIdentifier;
    public: 
       CIdentifierFilter(swarmmesh::CSwarmMesh<SEventData>* pc_sm) : 
          swarmmesh::CSwarmMesh<SEventData>::CFilterOperation(pc_sm) {}
@@ -139,7 +160,7 @@ class CIdentifierFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOpera
       bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
       void Serialize(std::vector<uint8_t>&) override;
       size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
-      void Init(std::unordered_map<std::string, std::any> filter_params) override;
+      void Init(std::unordered_map<std::string, std::any>&) override;
 };
 
 /****************************************/
@@ -222,7 +243,7 @@ private:
  * Data management related members
  **/ 
 
-public:
+private:
 
    /* Structure representing neighbors */
    struct SNeighbor
@@ -247,6 +268,8 @@ public:
 
    /* Data structure object */
    CMySwarmMesh m_cMySM; 
+
+public:
 
    /* Returns the list of events recorded by the robot
       at the current time step */

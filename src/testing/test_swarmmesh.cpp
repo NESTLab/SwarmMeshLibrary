@@ -62,8 +62,8 @@ public:
    CMyFilter(swarmmesh::CSwarmMesh<SMyDataType>* pc_sm) :
       swarmmesh::CSwarmMesh<SMyDataType>::CFilterOperation(pc_sm) {}
    ~CMyFilter() {}
-   bool operator()(const swarmmesh::CSwarmMesh<SMyDataType>::STuple& t_tuple) override {
-      return t_tuple.Value.X*t_tuple.Value.X + t_tuple.Value.Y*t_tuple.Value.Y < m_unSquareRange;
+   bool operator()(const swarmmesh::CSwarmMesh<SMyDataType>::STuple& s_tuple) override {
+      return s_tuple.Value.X*s_tuple.Value.X + s_tuple.Value.Y*s_tuple.Value.Y < m_unSquareRange;
    }
    void Serialize(std::vector<uint8_t>& vec_buffer) override {
       swarmmesh::PackUInt32(vec_buffer, m_unSquareRange);
@@ -72,7 +72,7 @@ public:
       m_unSquareRange = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
       return un_offset;
    }
-   void Init(std::unordered_map<std::string, std::any> filter_params) override {
+   void Init(std::unordered_map<std::string, std::any>& filter_params) override {
       m_unSquareRange = std::any_cast<uint32_t>(filter_params["range"]);
    }
 private:
@@ -87,23 +87,23 @@ public:
    CMySum(swarmmesh::CSwarmMesh<SMyDataType>* pc_sm) :
       swarmmesh::CSwarmMesh<SMyDataType>::CAggregateOperation(pc_sm) {}
    ~CMySum() {}
-   SMyDataType operator()(const SMyDataType& t_aggregated,
-                          const swarmmesh::CSwarmMesh<SMyDataType>::STuple& t_current) override {
+   SMyDataType operator()(const SMyDataType& s_aggregated,
+                          const swarmmesh::CSwarmMesh<SMyDataType>::STuple& s_current) override {
       /* Search for tuple */
       for(auto t : m_vecTuples) {
          /* Already considered? */
-         if(t.Key.Hash == t_current.Key.Hash &&
-            t.Value.X == t_current.Value.Y &&
-            t.Value.X == t_current.Value.Y) {
-            return t_aggregated;
+         if(t.Key.Hash == s_current.Key.Hash &&
+            t.Value.X == s_current.Value.Y &&
+            t.Value.X == s_current.Value.Y) {
+            return s_aggregated;
          }
       }
       /* Add it to the list */
-      m_vecTuples.push_back(t_current);
+      m_vecTuples.push_back(s_current);
       /* Sum! */
       SMyDataType sResult;
-      sResult.X = t_aggregated.X + t_current.Value.X;
-      sResult.Y = t_aggregated.Y + t_current.Value.Y;
+      sResult.X = s_aggregated.X + s_current.Value.X;
+      sResult.Y = s_aggregated.Y + s_current.Value.Y;
       return sResult;
    }
    void Serialize(std::vector<uint8_t>&) override {}

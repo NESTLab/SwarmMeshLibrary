@@ -5,18 +5,18 @@
 
 SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_offset) {
    SEventData sValue;
-   sValue.type = swarmmesh::UnpackString(vec_buffer, un_offset);
-   sValue.payload = swarmmesh::UnpackFloat(vec_buffer, un_offset);
-   sValue.location = std::make_pair(swarmmesh::UnpackFloat(vec_buffer, un_offset),
-                                    swarmmesh::UnpackFloat(vec_buffer, un_offset));
+   sValue.Type = swarmmesh::UnpackString(vec_buffer, un_offset);
+   sValue.Payload = swarmmesh::UnpackFloat(vec_buffer, un_offset);
+   sValue.Location = {swarmmesh::UnpackFloat(vec_buffer, un_offset), 
+                     swarmmesh::UnpackFloat(vec_buffer, un_offset)};
    return sValue;
 }
 
 void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_event) {
-   swarmmesh::PackString(vec_buffer, s_event.type);
-   swarmmesh::PackFloat(vec_buffer, s_event.payload);
-   swarmmesh::PackFloat(vec_buffer, s_event.location.first);
-   swarmmesh::PackFloat(vec_buffer, s_event.location.second);
+   swarmmesh::PackString(vec_buffer, s_event.Type);
+   swarmmesh::PackFloat(vec_buffer, s_event.Payload);
+   swarmmesh::PackFloat(vec_buffer, s_event.Location.X);
+   swarmmesh::PackFloat(vec_buffer, s_event.Location.Y);
 }
 
 // swarmmesh::SKey HashEventDataType(SEventData& s_value) {
@@ -46,9 +46,9 @@ void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_eve
 // }
 
 
-swarmmesh::SKey HashEventDataType::operator()(SEventData& s_value) {
+swarmmesh::SKey CHashEventDataType::operator()(SEventData& s_value) {
    
-   std::string strColor = s_value.type;
+   std::string strColor = s_value.Type;
 
    /* Data hashing based on blob color */
    uint32_t unHash;
@@ -68,8 +68,8 @@ swarmmesh::SKey HashEventDataType::operator()(SEventData& s_value) {
 
    /* Unique tuple identifier based on robot id and 
       tuple count */
-   ++unTupleCount;
-   uint32_t unIdentifier = ((uint32_t) unRobotId << 16) + unTupleCount;
+   ++m_unTupleCount;
+   uint32_t unIdentifier = ((uint32_t) m_unRobotId << 16) + m_unTupleCount;
    
    return swarmmesh::SKey(unHash, unIdentifier);
 }
@@ -85,77 +85,77 @@ swarmmesh::SKey HashEventDataType::operator()(SEventData& s_value) {
 /****************************************/
 /****************************************/
 
-void CMySwarmMesh::Init(uint16_t unRId) {
-   hashEvent.Init(unRId);
-   CSwarmMesh::Init(unRId, hashEvent); 
+void CMySwarmMesh::Init(uint16_t un_robot_id) {
+   m_cHashEvent.Init(un_robot_id);
+   CSwarmMesh::Init(un_robot_id, m_cHashEvent); 
 }
 
 
 /****************************************/
 /****************************************/
 
-void CTypeFilter::Init(std::unordered_map<std::string, std::any> filter_params) {
-   eventType = std::any_cast<std::string>(filter_params["type"]);
+void CTypeFilter::Init(std::unordered_map<std::string, std::any>& map_filter_params) {
+   m_strEventType = std::any_cast<std::string>(map_filter_params.at("type"));
 }
 
-bool CTypeFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& tuple) {
-   return tuple.Value.type == eventType;
+bool CTypeFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& s_tuple) {
+   return s_tuple.Value.Type == m_strEventType;
 }
 
 void CTypeFilter::Serialize(std::vector<uint8_t>& vec_buffer) {
-   swarmmesh::PackString(vec_buffer, eventType);
+   swarmmesh::PackString(vec_buffer, m_strEventType);
 }
 
 size_t CTypeFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) {
-   eventType = swarmmesh::UnpackString(vec_buffer, un_offset);
+   m_strEventType = swarmmesh::UnpackString(vec_buffer, un_offset);
    return un_offset;
 }
 
 /****************************************/
 /****************************************/
 
-void CLocationFilter::Init(std::unordered_map<std::string, std::any> filter_params) {
-   radius = std::any_cast<float>(filter_params["radius"]);
-   eventLocation = std::any_cast<std::pair<float, float> >(filter_params["location"]);
+void CLocationFilter::Init(std::unordered_map<std::string, std::any>& map_filter_params) {
+   m_fRadius = std::any_cast<float>(map_filter_params.at("radius"));
+   m_sEventLocation = std::any_cast<SLocation>(map_filter_params.at("location"));
 }
 
-bool CLocationFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& tuple) {
-   CVector2 eventCoord = CVector2(eventLocation.first, eventLocation.second);
-   CVector2 tupleCoord = CVector2(tuple.Value.location.first, tuple.Value.location.second);
+bool CLocationFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& s_tuple) {
+   CVector2 cEventCoord = CVector2(m_sEventLocation.X, m_sEventLocation.Y);
+   CVector2 cTupleCoord = CVector2(s_tuple.Value.Location.X, s_tuple.Value.Location.Y);
 
-   return SquareDistance(eventCoord, tupleCoord) <= radius;
+   return SquareDistance(cEventCoord, cTupleCoord) <= m_fRadius;
 }
 
 void CLocationFilter::Serialize(std::vector<uint8_t>& vec_buffer) {
-   swarmmesh::PackFloat(vec_buffer, radius);
-   swarmmesh::PackFloat(vec_buffer, eventLocation.first);
-   swarmmesh::PackFloat(vec_buffer, eventLocation.second);
+   swarmmesh::PackFloat(vec_buffer, m_fRadius);
+   swarmmesh::PackFloat(vec_buffer, m_sEventLocation.X);
+   swarmmesh::PackFloat(vec_buffer, m_sEventLocation.Y);
 }
 
 size_t CLocationFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) {
-   radius = swarmmesh::UnpackFloat(vec_buffer, un_offset);
-   eventLocation = std::make_pair(swarmmesh::UnpackFloat(vec_buffer, un_offset),
-                                    swarmmesh::UnpackFloat(vec_buffer, un_offset));
+   m_fRadius = swarmmesh::UnpackFloat(vec_buffer, un_offset);
+   m_sEventLocation = {swarmmesh::UnpackFloat(vec_buffer, un_offset), 
+                        swarmmesh::UnpackFloat(vec_buffer, un_offset)};
    return un_offset;
 }
 
 /****************************************/
 /****************************************/
 
-void CIdentifierFilter::Init(std::unordered_map<std::string, std::any> filter_params) {
-   eventIdentifier = std::any_cast<uint32_t>(filter_params["identifier"]);
+void CIdentifierFilter::Init(std::unordered_map<std::string, std::any>& map_filter_params) {
+   m_unEventIdentifier = std::any_cast<uint32_t>(map_filter_params.at("identifier"));
 }
 
-bool CIdentifierFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& tuple) {
-   return eventIdentifier == tuple.Key.Identifier;
+bool CIdentifierFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& s_tuple) {
+   return m_unEventIdentifier == s_tuple.Key.Identifier;
 }
 
 void CIdentifierFilter::Serialize(std::vector<uint8_t>& vec_buffer) {
-   swarmmesh::PackUInt32(vec_buffer, eventIdentifier);
+   swarmmesh::PackUInt32(vec_buffer, m_unEventIdentifier);
 }
 
 size_t CIdentifierFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) {
-   eventIdentifier = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
+   m_unEventIdentifier = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
 
    return un_offset;
 }
@@ -251,12 +251,12 @@ void CSwarmMeshController::ControlStep()
    Diffuse();
 
    /* Record events */
-   std::queue<SEventData> sEvents = RecordEvents();   
-   while(!sEvents.empty())
+   std::queue<SEventData> queueEvents = RecordEvents();   
+   while(!queueEvents.empty())
    {
       /* Retrieve event to write in SwarmMesh */
-      SEventData sEvent = sEvents.front();
-      sEvents.pop();
+      SEventData sEvent = queueEvents.front();
+      queueEvents.pop();
       ++m_unTupleCount;
       /* Perform a put operation in SwarmMesh */
       m_cMySM.Put(sEvent);
@@ -266,33 +266,33 @@ void CSwarmMeshController::ControlStep()
    m_cMySM.Route();
 
    /* Randomly add Filter messages */
-   float p = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
-   if (p < 0.2) {
+   float fP = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
+   if (fP < 0.2) {
       /* Filter type */
-      int type = std::rand() % 3;
-      std::unordered_map<std::string, std::any> filter_params;
+      int nFilterType = std::rand() % 3;
+      std::unordered_map<std::string, std::any> mapFilterParams;
 
       /* Assign parameters based on type */
-      switch (type) {
+      switch (nFilterType) {
       case 0:
-         filter_params["type"] = std::string("blue");
+         mapFilterParams["type"] = std::string("blue");
          break;
       case 1: {
-         float radius = 4.5f;
-         std::pair<float, float> location = std::make_pair(10.0f, 10.0f);
-         filter_params["radius"] = radius;
-         filter_params["location"] = location;
+         float fRadius = 4.5f;
+         SLocation sLocation = {10.0f, 11.0f};
+         mapFilterParams["radius"] = fRadius;
+         mapFilterParams["location"] = sLocation;
          break;
       }
       case 2:
-         uint32_t identifier = 32768;
-         filter_params["identifier"] = identifier;
+         uint32_t unIdentifier = 32768;
+         mapFilterParams["identifier"] = unIdentifier;
          break;
       
       // default: throw THROW_ARGOSEXCEPTION("Invalid filter type : ");
          // break;
       }
-      m_cMySM.Filter((uint16_t) type, filter_params);
+      m_cMySM.Filter((uint16_t) nFilterType, mapFilterParams);
    }
 
    /* Process outgoing messages */
@@ -305,11 +305,11 @@ void CSwarmMeshController::ControlStep()
 
 std::queue<SEventData> CSwarmMeshController::RecordEvents() 
 {
-   std::queue<SEventData> sEvents;
+   std::queue<SEventData> queueEvents;
 
    /* Get readings from blob camera */
    const CCI_ColoredBlobOmnidirectionalCameraSensor::SReadings& tBlobReads =
-                m_pcBlobCamera->GetReadings();
+               m_pcBlobCamera->GetReadings();
 
    for(size_t i = 0; i < tBlobReads.BlobList.size(); ++i) {
 
@@ -340,27 +340,29 @@ std::queue<SEventData> CSwarmMeshController::RecordEvents()
             }
          }
       }
-      else {bLocalLeader = false;}
+      else {
+         bLocalLeader = false;
+      }
       /* If leader, record the event */
       if (bLocalLeader) {
          SEventData sEvent;
          std::ostringstream stream;
          stream  << tBlobReads.BlobList[i]->Color;
-         sEvent.type = stream.str();
-         sEvent.payload = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
+         sEvent.Type = stream.str();
+         sEvent.Payload = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
          CVector2 cPos = ComputeAbsolutePosition(cEventCoord);
-         sEvent.location = std::make_pair(cPos.GetX(), cPos.GetY());
-         sEvents.push(sEvent);
+         sEvent.Location = {static_cast<float>(cPos.GetX()), static_cast<float>(cPos.GetY())};
+         queueEvents.push(sEvent);
       }
    }
-   return sEvents;
+   return queueEvents;
 }
 
 /****************************************/
 /****************************************/
 
 
-CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEvent)
+CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coord_event)
 {
    /* Get readings from positioning sensor */
    const CCI_PositioningSensor::SReading& tPosReads = 
@@ -371,7 +373,7 @@ CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEv
    CRadians cTheta, cY, cX;
    (tPosReads.Orientation).ToEulerAngles(cTheta, cY, cX);
    /* Position of event in global frame */
-   CVector2 cEvet = c_coordEvent;
+   CVector2 cEvet = c_coord_event;
    Real fX = cPosRobot.GetX();
    Real fY = cPosRobot.GetY();
    CVector2 cRotated = (cEvet).Rotate(cTheta);
@@ -409,8 +411,8 @@ void CSwarmMeshController::ProcessInMsgs()
       std::vector<std::uint8_t> vecBuffer;
       while(cData.Size()) vecBuffer.push_back((uint8_t) cData.PopFront<uint8_t>());
       /* Process swarmmesh messages */
-      size_t offset = 0;
-      m_cMySM.Deserialize(vecBuffer, offset);
+      size_t unOffset = 0;
+      m_cMySM.Deserialize(vecBuffer, unOffset);
    }
 
 }

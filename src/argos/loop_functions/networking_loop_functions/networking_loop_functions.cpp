@@ -106,9 +106,9 @@ void CNetworkingLoopFunctions::GenerateBlobs() {
          /* Create the blob within range of at least one robot */
          UInt32 unRId = m_pcRNG->Uniform(CRange<UInt32>(1, m_unNumRobots + 1));
          //LOG << "robot " << unRId << std::endl;
-         CFootBotEntity& fb = dynamic_cast<CFootBotEntity&>(
+         CFootBotEntity& cFootBot = dynamic_cast<CFootBotEntity&>(
                                  GetSpace().GetEntity("K" + ToString(unRId)));
-         CVector3 cPos = fb.GetEmbodiedEntity().GetOriginAnchor().Position;
+         CVector3 cPos = cFootBot.GetEmbodiedEntity().GetOriginAnchor().Position;
          fX += cPos.GetX();
          fY += cPos.GetY();
       }
