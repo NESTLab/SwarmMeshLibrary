@@ -72,9 +72,15 @@ public:
       m_unSquareRange = swarmmesh::UnpackUInt32(vec_buffer, un_offset);
       return un_offset;
    }
-   void Init(std::unordered_map<std::string, std::any>& filter_params) override {
-      m_unSquareRange = std::any_cast<uint32_t>(filter_params["range"]);
+   void Init(const std::unordered_map<std::string, std::any>& map_filterParams) override {
+      m_unSquareRange = std::any_cast<uint32_t>(map_filterParams.at("range"));
    }
+   std::unordered_map<std::string, std::any> GetParams() override {
+      std::unordered_map<std::string, std::any> mapFilterParams;
+      mapFilterParams["range"] = m_unSquareRange;
+      return mapFilterParams;
+   }
+
 private:
    uint32_t m_unSquareRange;
 };

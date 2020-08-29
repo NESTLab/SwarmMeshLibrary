@@ -85,17 +85,23 @@ swarmmesh::SKey CHashEventDataType::operator()(SEventData& s_value) {
 /****************************************/
 /****************************************/
 
-void CMySwarmMesh::Init(uint16_t un_robot_id) {
-   m_cHashEvent.Init(un_robot_id);
-   CSwarmMesh::Init(un_robot_id, m_cHashEvent); 
+void CMySwarmMesh::Init(uint16_t un_robotId) {
+   m_cHashEvent.Init(un_robotId);
+   CSwarmMesh::Init(un_robotId, m_cHashEvent); 
 }
 
 
 /****************************************/
 /****************************************/
 
-void CTypeFilter::Init(std::unordered_map<std::string, std::any>& map_filter_params) {
-   m_strEventType = std::any_cast<std::string>(map_filter_params.at("type"));
+std::unordered_map<std::string, std::any> CTypeFilter::GetParams() {
+   std::unordered_map<std::string, std::any> mapFilterParams;
+   mapFilterParams["type"] = m_strEventType;
+   return mapFilterParams;
+}
+
+void CTypeFilter::Init(const std::unordered_map<std::string, std::any>& map_filterParams) {
+   m_strEventType = std::any_cast<std::string>(map_filterParams.at("type"));
 }
 
 bool CTypeFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& s_tuple) {
@@ -114,9 +120,16 @@ size_t CTypeFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size_t u
 /****************************************/
 /****************************************/
 
-void CLocationFilter::Init(std::unordered_map<std::string, std::any>& map_filter_params) {
-   m_fRadius = std::any_cast<float>(map_filter_params.at("radius"));
-   m_sEventLocation = std::any_cast<SLocation>(map_filter_params.at("location"));
+std::unordered_map<std::string, std::any> CLocationFilter::GetParams() {
+   std::unordered_map<std::string, std::any> mapFilterParams;
+   mapFilterParams["radius"] = m_fRadius;
+   mapFilterParams["location"] = m_sEventLocation;
+   return mapFilterParams;
+}
+
+void CLocationFilter::Init(const std::unordered_map<std::string, std::any>& map_filterParams) {
+   m_fRadius = std::any_cast<float>(map_filterParams.at("radius"));
+   m_sEventLocation = std::any_cast<SLocation>(map_filterParams.at("location"));
 }
 
 bool CLocationFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& s_tuple) {
@@ -142,8 +155,14 @@ size_t CLocationFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, size
 /****************************************/
 /****************************************/
 
-void CIdentifierFilter::Init(std::unordered_map<std::string, std::any>& map_filter_params) {
-   m_unEventIdentifier = std::any_cast<uint32_t>(map_filter_params.at("identifier"));
+std::unordered_map<std::string, std::any> CIdentifierFilter::GetParams() {
+   std::unordered_map<std::string, std::any> mapFilterParams;
+   mapFilterParams["identifier"] = m_unEventIdentifier;
+   return mapFilterParams;
+}
+
+void CIdentifierFilter::Init(const std::unordered_map<std::string, std::any>& map_filterParams) {
+   m_unEventIdentifier = std::any_cast<uint32_t>(map_filterParams.at("identifier"));
 }
 
 bool CIdentifierFilter::operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple& s_tuple) {
@@ -262,12 +281,9 @@ void CSwarmMeshController::ControlStep()
       m_cMySM.Put(sEvent);
    }
 
-   /* Tell SwarmMesh to queue messages for routing data */
-   m_cMySM.Route();
-
    /* Randomly add Filter messages */
    float fP = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
-   if (fP < 0.2) {
+   if (fP < 0.05) {
       /* Filter type */
       int nFilterType = std::rand() % 3;
       std::unordered_map<std::string, std::any> mapFilterParams;
@@ -279,7 +295,7 @@ void CSwarmMeshController::ControlStep()
          break;
       case 1: {
          float fRadius = 4.5f;
-         SLocation sLocation = {10.0f, 11.0f};
+         SLocation sLocation(10.0f, 11.0f);
          mapFilterParams["radius"] = fRadius;
          mapFilterParams["location"] = sLocation;
          break;
@@ -294,6 +310,9 @@ void CSwarmMeshController::ControlStep()
       }
       m_cMySM.Filter((uint16_t) nFilterType, mapFilterParams);
    }
+
+   /* Tell SwarmMesh to queue messages for routing data */
+   m_cMySM.Route();
 
    /* Process outgoing messages */
    ProcessOutMsgs();
@@ -362,7 +381,7 @@ std::queue<SEventData> CSwarmMeshController::RecordEvents()
 /****************************************/
 
 
-CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coord_event)
+CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEvent)
 {
    /* Get readings from positioning sensor */
    const CCI_PositioningSensor::SReading& tPosReads = 
@@ -373,7 +392,7 @@ CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coord_e
    CRadians cTheta, cY, cX;
    (tPosReads.Orientation).ToEulerAngles(cTheta, cY, cX);
    /* Position of event in global frame */
-   CVector2 cEvet = c_coord_event;
+   CVector2 cEvet = c_coordEvent;
    Real fX = cPosRobot.GetX();
    Real fY = cPosRobot.GetY();
    CVector2 cRotated = (cEvet).Rotate(cTheta);

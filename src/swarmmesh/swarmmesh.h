@@ -33,7 +33,7 @@ namespace swarmmesh {
       uint32_t Identifier; 
 
       /* Default constructor */
-      SKey() {}
+      SKey() = default;
       
       /* Constructor */
       SKey(uint32_t un_hash, uint32_t un_identifier): 
@@ -174,8 +174,8 @@ namespace swarmmesh {
 
    public:
 
-      void Init(uint16_t un_robot_id, std::function<SKey(T&)> fun_hash) {
-         m_unRId = un_robot_id;
+      void Init(uint16_t un_robotId, std::function<SKey(T&)> fun_hash) {
+         m_unRId = un_robotId;
          m_funHash = fun_hash;
       }
 
@@ -202,6 +202,70 @@ namespace swarmmesh {
          }
 
       };
+
+      struct SQueryRequest {
+         /**
+          * Unique query identifier
+          */
+         uint32_t Identifier;
+         uint32_t HopCount;
+         
+         uint16_t Source;
+         
+         /**
+          * Map of filter parameters for the FILTER operation
+          */
+         std::unordered_map<std::string, std::any> FilterParameters;
+
+         /**
+          * Type of filter
+          */
+         uint16_t FilterType;
+
+         SQueryRequest() = default;
+         SQueryRequest(const SQueryRequest&) = default;
+
+         SQueryRequest(uint32_t un_identifier, std::unordered_map<std::string, std::any> &map_filterParams, 
+                       uint16_t un_filterType, uint16_t un_source, uint32_t un_hopCount) : 
+                     Identifier(un_identifier),
+                     FilterParameters(map_filterParams),
+                     FilterType(un_filterType),
+                     Source(un_source),
+                     HopCount(un_hopCount) {}
+                  
+         SQueryRequest& operator=(const SQueryRequest& s_request) {
+            HopCount = s_request.HopCount;
+            Source = s_request.Source;
+            FilterType = s_request.FilterType;
+            FilterParameters = s_request.FilterParameters;
+            Identifier = s_request.Identifier;
+
+            return *this;
+         }
+      };
+
+      struct SQueryResponse {
+         std::vector<STuple> Tuples;
+         uint16_t Destination;
+         uint32_t HopCount;
+         uint32_t Identifier;
+
+         SQueryResponse() = default;
+         SQueryResponse(const SQueryResponse&) = default;
+
+         SQueryResponse(const std::vector<STuple>& s_tuples, uint16_t un_dest, uint32_t un_hopCount, 
+                  uint32_t un_identifier) :
+            Tuples(s_tuples),
+            Destination(un_dest),
+            HopCount(un_hopCount),
+            Identifier(un_identifier) {}
+      
+         SQueryResponse& operator=(const SQueryResponse& s_response) {
+            Tuples = s_response.Tuples;
+            Destination = s_response.Destination;
+            return *this;
+         }
+      };  
 
       /* Predicate for sorting tuples */
       struct TupleLess
@@ -289,10 +353,11 @@ namespace swarmmesh {
 
          /**
           * Initialize filter parameters.
-          * @param map_filter_params Filter Parameters
+          * @param map_filterParams Filter Parameters
           * @return void
           */
-         virtual void Init(std::unordered_map<std::string, std::any>& map_filter_params) = 0;
+         virtual void Init(const std::unordered_map<std::string, std::any>& map_filterParams) = 0;
+         virtual std::unordered_map<std::string, std::any> GetParams() = 0;
       };
 
       /****************************************/
@@ -376,8 +441,8 @@ namespace swarmmesh {
       }
 
       /* Add new neighbor */
-      void AddNeighbor(uint16_t un_robot_id, float f_distance, float f_azimuth) {
-         m_mapNeighbors[un_robot_id] = SNeighbor(f_distance, f_azimuth);
+      void AddNeighbor(uint16_t un_robotId, float f_distance, float f_azimuth) {
+         m_mapNeighbors[un_robotId] = SNeighbor(f_distance, f_azimuth);
       }
 
       /* Compute Node ID 
@@ -394,12 +459,12 @@ namespace swarmmesh {
       }
 
       /* Check if this tuple can be stored */
-      bool IsStorableTuple(STuple s_tuple, uint32_t un_node_id) {
+      bool IsStorableTuple(STuple s_tuple, uint32_t un_nodeId) {
          /* Get degree in communication graph */
          size_t unNumNeighbors = m_mapNeighbors.size();
          /* Storable if node id higher than hash 
             if storing it */
-         return s_tuple.Key.Hash < (un_node_id - unNumNeighbors);
+         return s_tuple.Key.Hash < (un_nodeId - unNumNeighbors);
       }
 
       void Serialize(std::vector<uint8_t>& vec_buffer) override {
@@ -426,7 +491,8 @@ namespace swarmmesh {
                   /* Set message type */
                   PackUInt8(vec_buffer, (uint8_t) eMsgType);
                   /* Get messages from map */
-                  STuple sTuple = i->second.Msg;
+                  SMsg sMsg = std::any_cast<SMsg>(i->second);
+                  STuple sTuple = sMsg.Msg;
                   /* Serialize */
                   m_funPack(vec_buffer, sTuple.Value);
                }
@@ -435,17 +501,26 @@ namespace swarmmesh {
                /* Set message type */
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
                break;
-            case MSG_OP_FILTER:
+            case MSG_OP_FILTER_REQUEST:
                for (auto i = rangeMsg.first; i != rangeMsg.second; ++i) {
                   /* Set message type */
                   PackUInt8(vec_buffer, (uint8_t) eMsgType);
+                  SQueryRequest sRequest = std::any_cast<SQueryRequest>(i->second);
+
+                  /* Pack source */
+                  PackUInt16(vec_buffer, sRequest.Source);
+                  /* Pack Query Identifier */
+                  PackUInt32(vec_buffer, sRequest.Identifier);
+                  /* Pack Hop Count */
+                  PackUInt32(vec_buffer, sRequest.HopCount);
+
                   /* Set filter type */
-                  uint16_t unFilterType = i->second.FilterType;
+                  uint16_t unFilterType = sRequest.FilterType;
                   PackUInt16(vec_buffer, unFilterType);
                   /* Create filter with filter parameters */
                   CFilterOperation* pcFilterOp = m_cFilters.New(unFilterType);
                   try {
-                     pcFilterOp->Init(i->second.FilterParameters);
+                     pcFilterOp->Init(sRequest.FilterParameters);
                   } catch (const std::out_of_range& e) {
                      throw CSwarmMeshException("Filter initialization failed ", e.what());
                   }
@@ -453,8 +528,32 @@ namespace swarmmesh {
                   pcFilterOp->Serialize(vec_buffer);
                }
                break;
+            case MSG_OP_FILTER_RESPONSE:
+               for (auto i = rangeMsg.first; i != rangeMsg.second; ++i) {
+                  /* Set message type */
+                  PackUInt8(vec_buffer, (uint8_t) eMsgType);
+
+                  SQueryResponse sResponse = std::any_cast<SQueryResponse>(i->second);
+                  /* Set Destination */
+                  PackUInt16(vec_buffer, sResponse.Destination);
+                  /* Set Query Identifier */
+                  PackUInt32(vec_buffer, sResponse.Identifier);
+                  /* Set HopCount */
+                  PackUInt32(vec_buffer, sResponse.HopCount);
+                  uint32_t unNumTuples = sResponse.Tuples.size();
+
+                  /* Set number of tuples */
+                  PackUInt32(vec_buffer, unNumTuples);
+
+                  /* Pack each tuple */
+                  for (STuple &sTuple: sResponse.Tuples) {
+                     m_funPack(vec_buffer, sTuple.Value);
+                  }
+               }
+               break;
             case MSG_OP_TUPLE:
-               /* TODO */
+               /* TODO          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, sMsg));
+*/
                break;
             case MSG_OP_AGGREGATE:
                /* TODO */
@@ -497,17 +596,73 @@ namespace swarmmesh {
                   /* TODO */
                   break;
                }
-               case MSG_OP_FILTER: {
+               case MSG_OP_FILTER_REQUEST: {
+                  /* Unpack Source, Query Identifier, Hop Count */
+
+                  uint16_t unSource = UnpackUInt16(vec_buffer, un_offset);
+                  uint32_t unQueryId = UnpackUInt32(vec_buffer, un_offset);
+                  uint32_t unHopCount = UnpackUInt32(vec_buffer, un_offset);
+
                   /* Create the tuple filter */
                   uint16_t unOpType = UnpackUInt16(vec_buffer, un_offset);
                   CFilterOperation* pcFilterOp = m_cFilters.New(unOpType);
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
+
+                  /* Request already received */
+                  if (m_mapQueryRequests.find(unQueryId) != m_mapQueryRequests.end()) {
+                     break;
+                  }
+                  m_mapQueryRequests[unQueryId] = unHopCount;
+                  std::unordered_map<std::string, std::any> mapFilterParams = pcFilterOp->GetParams();
+                  SQueryRequest sRequest(unQueryId, mapFilterParams, unOpType, unSource, unHopCount + 1);
+                  
+                  /* Forward request on to neighbors */
+                  m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_REQUEST, sRequest));
                   /* Go! */
                   std::vector<STuple> vecResult;
                   DoFilter(vecResult, *pcFilterOp, m_vecStoredTuples);
                   DoFilter(vecResult, *pcFilterOp, m_vecRoutingTuples);
-                  // TODO do something with vecResult
+
+                  SQueryResponse sResponse(vecResult, unSource, unHopCount + 1, unQueryId);
+                  m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+
                   delete pcFilterOp;
+                  break;
+               }
+
+               case MSG_OP_FILTER_RESPONSE: {
+                  uint16_t unDestination = UnpackUInt16(vec_buffer, un_offset);
+                  uint32_t unQueryId = UnpackUInt32(vec_buffer, un_offset);
+                  uint32_t unHopCount = UnpackUInt32(vec_buffer, un_offset);
+                  uint32_t unNumTuples = UnpackUInt32(vec_buffer, un_offset);
+
+                  std::vector<STuple> vecTuples;
+                  for (uint32_t i = 0; i < unNumTuples; i++) {
+                     STuple sTuple;
+                     sTuple.Value = m_funUnpack(vec_buffer, un_offset);
+                     sTuple.Key = m_funHash(sTuple.Value);
+                     vecTuples.push_back(sTuple);
+                  }
+
+                  /* Do not route if response is received from node with lower hop count or if corresponding
+                  request was not received */
+                  //TODO: Discuss this
+                  if (m_mapQueryRequests.find(unQueryId) == m_mapQueryRequests.end() || 
+                     m_mapQueryRequests[unQueryId] >= unHopCount) {
+                        break;
+                     }
+                  /* Destination robot reached */
+                  if (unDestination == m_unRId) {
+                     //TODO: Do something with vecTuples
+                     std::cout << unNumTuples << std::endl;
+                     break;
+                  }
+
+                  /* Forward response to all neighbors */
+                  // Forward/Send responses with 0 tuples also?
+                  SQueryResponse sResponse(vecTuples, unDestination, m_mapQueryRequests[unQueryId], unQueryId);
+                  m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+
                   break;
                }
                case MSG_OP_TUPLE: {
@@ -563,10 +718,14 @@ namespace swarmmesh {
       /**
        * User-facing Filter function
        */
-      void Filter(uint16_t un_type, std::unordered_map<std::string, std::any>& map_filter_params) {
-         SMsg msg;
-         msg.SetFilterParameters(un_type, map_filter_params);
-         m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, msg));
+      void Filter(uint16_t un_type, std::unordered_map<std::string, std::any>& map_filterParams) {
+         m_unQueryCount++;
+         uint32_t unQueryId = ((uint32_t) m_unRId << 16) + m_unQueryCount;
+         uint32_t unHopCount = 0;
+         m_mapQueryRequests[unQueryId] = unHopCount;
+         SQueryRequest sRequest(unQueryId, map_filterParams, un_type, m_unRId, unHopCount + 1);
+
+         m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_REQUEST, sRequest));
       }
 
       /**
@@ -634,6 +793,7 @@ namespace swarmmesh {
             }
             ++unCount;
          }
+
          /*TODO: Route other messages */
          // for (auto const& item : m_queueOutMsgs) {
          //    std::cout << " MESSAGE IN QUEUE " << (uint8_t) item.first << std::endl;
@@ -812,8 +972,12 @@ namespace swarmmesh {
       /**
        * Unique identifier
        */ 
-
       uint16_t m_unRId;
+
+      /**
+       * Query count
+       */
+      uint16_t m_unQueryCount = 0;
 
       /**
        * Map of current neighbors indexed by 
@@ -839,7 +1003,8 @@ namespace swarmmesh {
          MSG_NGHBRS = 1,
          MSG_OP_PUT,
          MSG_OP_ERASE,
-         MSG_OP_FILTER,
+         MSG_OP_FILTER_REQUEST,
+         MSG_OP_FILTER_RESPONSE,
          MSG_OP_TUPLE,
          MSG_OP_AGGREGATE,
          MSG_NUM
@@ -850,33 +1015,27 @@ namespace swarmmesh {
          uint16_t Destination;
          STuple Msg;
 
-         /**
-          * Map of filter parameters for the FILTER operation
-          */
-         std::unordered_map<std::string, std::any> FilterParameters;
-
-         /**
-          * Type of filter
-          */
-         uint16_t FilterType;
          /* Default Constructor */
          SMsg() {}
          /* Constructor */
          SMsg(STuple s_tuple, uint16_t un_id = 0):
             Msg(s_tuple),
             Destination(un_id) {}
+
+         SMsg(const SMsg&) = default;
          
-         void SetFilterParameters(uint16_t un_filter_type, std::unordered_map<std::string, std::any>& un_filter_params) {
-            FilterType = un_filter_type;
-            FilterParameters = un_filter_params;
-         }
       };
+
+      /** 
+       * Map of queries received so far 
+       */
+      std::unordered_map<uint32_t, uint32_t> m_mapQueryRequests;
 
       /**
        * Message queue
        * Map ordered by message type
        */
-      std::multimap<EMsgType, SMsg> m_queueOutMsgs;
+      std::multimap<EMsgType, std::any> m_queueOutMsgs;
 
       /**
        * The hash function.

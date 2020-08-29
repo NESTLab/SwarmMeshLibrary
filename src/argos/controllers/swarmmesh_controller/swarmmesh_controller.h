@@ -131,7 +131,8 @@ class CTypeFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
       bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
       void Serialize(std::vector<uint8_t>&) override;
       size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
-      void Init(std::unordered_map<std::string, std::any>&) override;
+      void Init(const std::unordered_map<std::string, std::any>&) override;
+      std::unordered_map<std::string, std::any> GetParams() override;
 };
 
 class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
@@ -146,7 +147,8 @@ class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperati
       bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
       void Serialize(std::vector<uint8_t>&) override;
       size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
-      void Init(std::unordered_map<std::string, std::any>&) override;
+      void Init(const std::unordered_map<std::string, std::any>&) override;
+      std::unordered_map<std::string, std::any> GetParams() override;
 };
 
 class CIdentifierFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
@@ -160,7 +162,8 @@ class CIdentifierFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOpera
       bool operator()(const swarmmesh::CSwarmMesh<SEventData>::STuple&) override;
       void Serialize(std::vector<uint8_t>&) override;
       size_t Deserialize(const std::vector<uint8_t>&, size_t) override;
-      void Init(std::unordered_map<std::string, std::any>&) override;
+      void Init(const std::unordered_map<std::string, std::any>&) override;
+      std::unordered_map<std::string, std::any> GetParams() override;
 };
 
 /****************************************/
