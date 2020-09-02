@@ -189,6 +189,8 @@ namespace swarmmesh {
          swarmmesh::SKey Key;
          T Value;
 
+         STuple() = default;
+
          /* Copy operator */
          STuple& operator=(const STuple& s_tuple) {
             Key = s_tuple.Key;
@@ -475,7 +477,6 @@ namespace swarmmesh {
          for (auto const& item : m_queueOutMsgs) {
 
             EMsgType eMsgType = item.first;
-            auto rangeMsg = m_queueOutMsgs.equal_range(eMsgType);
             switch (eMsgType) {
             case MSG_NGHBRS:
                /* Set message type */
@@ -485,72 +486,70 @@ namespace swarmmesh {
                /* Set Node Id*/
                PackUInt32(vec_buffer, Partition());
                break;
-            case MSG_OP_PUT:
-               for (auto i = rangeMsg.first; i != rangeMsg.second; ++i)
-               {
-                  /* Set message type */
-                  PackUInt8(vec_buffer, (uint8_t) eMsgType);
-                  /* Get messages from map */
-                  SMsg sMsg = std::any_cast<SMsg>(i->second);
-                  STuple sTuple = sMsg.Msg;
-                  /* Serialize */
-                  m_funPack(vec_buffer, sTuple.Value);
-               }
+            case MSG_OP_PUT: {
+               /* Set message type */
+               PackUInt8(vec_buffer, (uint8_t) eMsgType);
+               /* Get messages from map */
+               SMsg sMsg = std::any_cast<SMsg>(item.second);
+               STuple sTuple = sMsg.Msg;
+               /* Serialize */
+               m_funPack(vec_buffer, sTuple.Value);
                break;
+            }
             case MSG_OP_ERASE:
                /* Set message type */
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
                break;
-            case MSG_OP_FILTER_REQUEST:
-               for (auto i = rangeMsg.first; i != rangeMsg.second; ++i) {
-                  /* Set message type */
-                  PackUInt8(vec_buffer, (uint8_t) eMsgType);
-                  SQueryRequest sRequest = std::any_cast<SQueryRequest>(i->second);
+            case MSG_OP_FILTER_REQUEST: {
+               /* Set message type */
+               PackUInt8(vec_buffer, (uint8_t) eMsgType);
+               SQueryRequest sRequest = std::any_cast<SQueryRequest>(item.second);
 
-                  /* Pack source */
-                  PackUInt16(vec_buffer, sRequest.Source);
-                  /* Pack Query Identifier */
-                  PackUInt32(vec_buffer, sRequest.Identifier);
-                  /* Pack Hop Count */
-                  PackUInt32(vec_buffer, sRequest.HopCount);
+               /* Pack source */
+               PackUInt16(vec_buffer, sRequest.Source);
+               /* Pack Query Identifier */
+               PackUInt32(vec_buffer, sRequest.Identifier);
+               /* Pack Hop Count */
+               PackUInt32(vec_buffer, sRequest.HopCount);
 
-                  /* Set filter type */
-                  uint16_t unFilterType = sRequest.FilterType;
-                  PackUInt16(vec_buffer, unFilterType);
-                  /* Create filter with filter parameters */
-                  CFilterOperation* pcFilterOp = m_cFilters.New(unFilterType);
-                  try {
-                     pcFilterOp->Init(sRequest.FilterParameters);
-                  } catch (const std::out_of_range& e) {
-                     throw CSwarmMeshException("Filter initialization failed ", e.what());
-                  }
-                  /* Serialize filter */
-                  pcFilterOp->Serialize(vec_buffer);
+               /* Set filter type */
+               uint16_t unFilterType = sRequest.FilterType;
+               PackUInt16(vec_buffer, unFilterType);
+               /* Create filter with filter parameters */
+               CFilterOperation* pcFilterOp = m_cFilters.New(unFilterType);
+               try {
+                  pcFilterOp->Init(sRequest.FilterParameters);
+               } catch (const std::out_of_range& e) {
+                  throw CSwarmMeshException("Filter initialization failed ", e.what());
+               }
+               /* Serialize filter */
+               pcFilterOp->Serialize(vec_buffer);
+               break;
+            }
+            case MSG_OP_FILTER_RESPONSE: {
+               /* Set message type */
+               PackUInt8(vec_buffer, (uint8_t) eMsgType);
+
+               SQueryResponse sResponse = std::any_cast<SQueryResponse>(item.second);
+               /* Set Destination */
+               PackUInt16(vec_buffer, sResponse.Destination);
+               /* Set Query Identifier */
+               PackUInt32(vec_buffer, sResponse.Identifier);
+               /* Set HopCount */
+               PackUInt32(vec_buffer, sResponse.HopCount);
+               uint32_t unNumTuples = sResponse.Tuples.size();
+
+               /* Set number of tuples */
+               PackUInt32(vec_buffer, unNumTuples);
+
+               /* Pack each tuple */
+               for (STuple &sTuple: sResponse.Tuples) {
+                  PackUInt32(vec_buffer, sTuple.Key.Hash);
+                  PackUInt32(vec_buffer, sTuple.Key.Identifier);
+                  m_funPack(vec_buffer, sTuple.Value);
                }
                break;
-            case MSG_OP_FILTER_RESPONSE:
-               for (auto i = rangeMsg.first; i != rangeMsg.second; ++i) {
-                  /* Set message type */
-                  PackUInt8(vec_buffer, (uint8_t) eMsgType);
-
-                  SQueryResponse sResponse = std::any_cast<SQueryResponse>(i->second);
-                  /* Set Destination */
-                  PackUInt16(vec_buffer, sResponse.Destination);
-                  /* Set Query Identifier */
-                  PackUInt32(vec_buffer, sResponse.Identifier);
-                  /* Set HopCount */
-                  PackUInt32(vec_buffer, sResponse.HopCount);
-                  uint32_t unNumTuples = sResponse.Tuples.size();
-
-                  /* Set number of tuples */
-                  PackUInt32(vec_buffer, unNumTuples);
-
-                  /* Pack each tuple */
-                  for (STuple &sTuple: sResponse.Tuples) {
-                     m_funPack(vec_buffer, sTuple.Value);
-                  }
-               }
-               break;
+            }
             case MSG_OP_TUPLE:
                /* TODO          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, sMsg));
 */
@@ -623,8 +622,11 @@ namespace swarmmesh {
                   DoFilter(vecResult, *pcFilterOp, m_vecStoredTuples);
                   DoFilter(vecResult, *pcFilterOp, m_vecRoutingTuples);
 
-                  SQueryResponse sResponse(vecResult, unSource, unHopCount + 1, unQueryId);
-                  m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+                  /* Send response only if there are tuples to be sent */
+                  if (vecResult.size() > 0) {
+                     SQueryResponse sResponse(vecResult, unSource, unHopCount, unQueryId);
+                     m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+                  }
 
                   delete pcFilterOp;
                   break;
@@ -639,14 +641,17 @@ namespace swarmmesh {
                   std::vector<STuple> vecTuples;
                   for (uint32_t i = 0; i < unNumTuples; i++) {
                      STuple sTuple;
+                     sTuple.Key = SKey(UnpackUInt32(vec_buffer, un_offset), UnpackUInt32(vec_buffer, un_offset));
                      sTuple.Value = m_funUnpack(vec_buffer, un_offset);
-                     sTuple.Key = m_funHash(sTuple.Value);
-                     vecTuples.push_back(sTuple);
-                  }
 
+                     /* Check if received tuple not received previously */
+                     if (m_mapQueryResponses.count(unQueryId) <= 0 ||
+                        m_mapQueryResponses[unQueryId].count(sTuple.Key.Identifier) <= 0) {
+                        vecTuples.push_back(sTuple);
+                     }
+                  }
                   /* Do not route if response is received from node with lower hop count or if corresponding
                   request was not received */
-                  //TODO: Discuss this
                   if (m_mapQueryRequests.find(unQueryId) == m_mapQueryRequests.end() || 
                      m_mapQueryRequests[unQueryId] >= unHopCount) {
                         break;
@@ -654,14 +659,18 @@ namespace swarmmesh {
                   /* Destination robot reached */
                   if (unDestination == m_unRId) {
                      //TODO: Do something with vecTuples
-                     std::cout << unNumTuples << std::endl;
                      break;
                   }
+                  /* Mark received tuples as processed for routing */
+                  for (const STuple &sTuple : vecTuples) {
+                     m_mapQueryResponses[unQueryId][sTuple.Key.Identifier] = true;
+                  }
 
-                  /* Forward response to all neighbors */
-                  // Forward/Send responses with 0 tuples also?
-                  SQueryResponse sResponse(vecTuples, unDestination, m_mapQueryRequests[unQueryId], unQueryId);
-                  m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+                  /* Forward response to all neighbors if tuples exist after removing duplicates */
+                  if (vecTuples.size() > 0) {
+                     SQueryResponse sResponse(vecTuples, unDestination, m_mapQueryRequests[unQueryId], unQueryId);
+                     m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+                  }
 
                   break;
                }
@@ -995,6 +1004,11 @@ namespace swarmmesh {
        * sorted by hash (high hash first out).
        */
       std::vector<STuple> m_vecRoutingTuples;
+
+      /**
+       * Map indicating query response tuples that have been routed already
+       */
+      std::unordered_map<uint32_t, std::unordered_map<uint32_t, bool>> m_mapQueryResponses;
 
 
    private:

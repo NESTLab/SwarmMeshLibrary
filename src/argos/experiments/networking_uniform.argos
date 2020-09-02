@@ -62,7 +62,7 @@
     <distribute>
       <position method="uniform" min="-3,-3,0" max="3,3,0" />
       <orientation method="gaussian" mean="0,0,0" std_dev="360,0,0" />
-      <entity quantity="10" max_trials="100" base_num="1">
+      <entity quantity="50" max_trials="100" base_num="1">
         <foot-bot id="K" rab_data_size="570" rab_range="2"
                   omnidirectional_camera_aperture="80" > 
           <controller config="knc" />
