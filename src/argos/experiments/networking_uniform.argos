@@ -17,7 +17,7 @@
   <controllers>
 
     <swarmmesh_controller id="knc"
-                                  library="build/argos/controllers/swarmmesh_controller/libswarmmesh_controller.so">
+                                  library="build/argos/controllers/swarmmesh_controller/libswarmmesh_controller">
       <actuators>
         <differential_steering implementation="default" />
         <range_and_bearing implementation="default" check_occlusions="false"/>
@@ -36,7 +36,7 @@
   <!-- ****************** -->
   <!-- * Loop functions * -->
   <!-- ****************** -->
-  <loop_functions library="build/argos/loop_functions/networking_loop_functions/libnetworking_loop_functions.so"
+  <loop_functions library="build/argos/loop_functions/networking_loop_functions/libnetworking_loop_functions"
                   label="networking_loop_functions">
     <networking load_factor="0.8" nb_robots="50" density="0.6" ratio_MI="1" lambda="0.5" min="-3" max="3"/>
   </loop_functions>
