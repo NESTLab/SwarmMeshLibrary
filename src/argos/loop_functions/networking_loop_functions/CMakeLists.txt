@@ -1,4 +1,3 @@
-link_directories(${CMAKE_BINARY_DIR}/controllers/swarmmesh_controller)
 set(networking_loop_functions_SOURCES networking_loop_functions.cpp)
 
 if(ARGOS_COMPILE_QTOPENGL)

@@ -1,20 +1,3 @@
-# cmake_minimum_required(VERSION 3.1)
-# project(argos3_examples)
-# set(CMAKE_CXX_STANDARD 11)
-
-
-if(APPLE)
-  option(ASAN "Use Clang Address Sanitizer in Debug builds")
-  if(ASAN)
-    # Add address sanitizer support for CLang
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fno-optimize-sibling-calls -fno-omit-frame-pointer")
-    set(CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} -fsanitize=address")
-    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} -fsanitize=address")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG} -fsanitize=address")
-  endif(ASAN)
-endif(APPLE)
-
 # Deactivate RPATH for MacOSX
 set(CMAKE_MACOSX_RPATH 0)
 
@@ -31,23 +14,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${ARGOS_PREFIX}/share/argos3/cmake)
 # code that depends on Qt and OpenGL
 include(ARGoSCheckQTOpenGL)
 
-# Look for the (optional) galib library
-find_package(GALIB)
-if(GALIB_FOUND)
-  include_directories(${GALIB_INCLUDE_DIRS})
-endif(GALIB_FOUND)
-
 # Find Lua
-# find_package(Lua52 REQUIRED)
-# if(LUA52_FOUND)
-#    include_directories(${LUA_INCLUDE_DIR})
-# endif(LUA52_FOUND)
-
-# find_package(swarm_mesh_library REQUIRED)
-# if(swarm_mesh_library_FOUND)
-#   message( "${swarm_mesh_library_INCLUDE_DIRS}")
-  # include_directories(${SwarmMeshLibrary_INCLUDE_DIRS})
-# endif(swarm_mesh_library_FOUND)
+find_package(Lua53)
+if(LUA53_FOUND)
+   include_directories(${LUA_INCLUDE_DIR})
+endif(LUA53_FOUND)
 
 # Set ARGoS include dir
 include_directories(${CMAKE_SOURCE_DIR} ${ARGOS_INCLUDE_DIRS})# ${LUA_INCLUDE_DIR})
