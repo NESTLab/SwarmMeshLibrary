@@ -531,8 +531,6 @@ namespace swarmmesh {
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
 
                SQueryResponse sResponse = std::any_cast<SQueryResponse>(item.second);
-               /* Set Destination */
-               PackUInt16(vec_buffer, sResponse.Destination);
                /* Set Query Identifier */
                PackUInt32(vec_buffer, sResponse.Identifier);
                /* Set HopCount */
@@ -611,7 +609,7 @@ namespace swarmmesh {
                   if (m_mapQueryRequests.find(unQueryId) != m_mapQueryRequests.end()) {
                      break;
                   }
-                  m_mapQueryRequests[unQueryId] = unHopCount;
+                  m_mapQueryRequests[unQueryId] = std::make_pair(unHopCount, unSource);
                   std::unordered_map<std::string, std::any> mapFilterParams = pcFilterOp->GetParams();
                   SQueryRequest sRequest(unQueryId, mapFilterParams, unOpType, unSource, unHopCount + 1);
                   
@@ -633,45 +631,29 @@ namespace swarmmesh {
                }
 
                case MSG_OP_FILTER_RESPONSE: {
-                  uint16_t unDestination = UnpackUInt16(vec_buffer, un_offset);
                   uint32_t unQueryId = UnpackUInt32(vec_buffer, un_offset);
                   uint32_t unHopCount = UnpackUInt32(vec_buffer, un_offset);
                   uint32_t unNumTuples = UnpackUInt32(vec_buffer, un_offset);
 
-                  std::vector<STuple> vecTuples;
                   for (uint32_t i = 0; i < unNumTuples; i++) {
                      STuple sTuple;
                      sTuple.Key = SKey(UnpackUInt32(vec_buffer, un_offset), UnpackUInt32(vec_buffer, un_offset));
                      sTuple.Value = m_funUnpack(vec_buffer, un_offset);
 
+                     /* Do not route if response is received from node with lower hop count or if corresponding
+                     request was not received */
+                     if (m_mapQueryRequests.find(unQueryId) == m_mapQueryRequests.end() || 
+                        m_mapQueryRequests[unQueryId].first >= unHopCount) {
+                        continue;
+                     }
+
                      /* Check if received tuple not received previously */
                      if (m_mapQueryResponses.count(unQueryId) <= 0 ||
                         m_mapQueryResponses[unQueryId].count(sTuple.Key.Identifier) <= 0) {
-                        vecTuples.push_back(sTuple);
+                        m_queueQueryResponses[unQueryId].push_back(sTuple);
+                        m_mapQueryResponses[unQueryId][sTuple.Key.Identifier] = true;
                      }
                   }
-                  /* Do not route if response is received from node with lower hop count or if corresponding
-                  request was not received */
-                  if (m_mapQueryRequests.find(unQueryId) == m_mapQueryRequests.end() || 
-                     m_mapQueryRequests[unQueryId] >= unHopCount) {
-                        break;
-                     }
-                  /* Destination robot reached */
-                  if (unDestination == m_unRId) {
-                     //TODO: Do something with vecTuples
-                     break;
-                  }
-                  /* Mark received tuples as processed for routing */
-                  for (const STuple &sTuple : vecTuples) {
-                     m_mapQueryResponses[unQueryId][sTuple.Key.Identifier] = true;
-                  }
-
-                  /* Forward response to all neighbors if tuples exist after removing duplicates */
-                  if (vecTuples.size() > 0) {
-                     SQueryResponse sResponse(vecTuples, unDestination, m_mapQueryRequests[unQueryId], unQueryId);
-                     m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
-                  }
-
                   break;
                }
                case MSG_OP_TUPLE: {
@@ -731,7 +713,7 @@ namespace swarmmesh {
          m_unQueryCount++;
          uint32_t unQueryId = ((uint32_t) m_unRId << 16) + m_unQueryCount;
          uint32_t unHopCount = 0;
-         m_mapQueryRequests[unQueryId] = unHopCount;
+         m_mapQueryRequests[unQueryId] = std::make_pair(unHopCount, m_unRId);
          SQueryRequest sRequest(unQueryId, map_filterParams, un_type, m_unRId, unHopCount + 1);
 
          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_REQUEST, sRequest));
@@ -802,6 +784,27 @@ namespace swarmmesh {
             }
             ++unCount;
          }
+
+         // Route MSG_OP_FILTER_RESPONSE messages
+
+         for (auto const &item : m_queueQueryResponses) {
+            uint32_t unQueryId = item.first;
+
+            /* Destination robot reached */
+            if (m_mapQueryRequests[unQueryId].second == m_unRId) {
+               //TODO: Do something with vecTuples
+               std::cout << item.second.size() << " " << m_unRId << std::endl;
+               break;
+            }
+
+            /* Forward response to all neighbors if tuples exist after removing duplicates */
+            if (item.second.size() > 0) {
+               SQueryResponse sResponse(item.second, m_mapQueryRequests[unQueryId].second, 
+                        m_mapQueryRequests[unQueryId].first, unQueryId);
+               m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
+            }
+         }
+         m_queueQueryResponses.clear();
 
          /*TODO: Route other messages */
          // for (auto const& item : m_queueOutMsgs) {
@@ -1005,11 +1008,6 @@ namespace swarmmesh {
        */
       std::vector<STuple> m_vecRoutingTuples;
 
-      /**
-       * Map indicating query response tuples that have been routed already
-       */
-      std::unordered_map<uint32_t, std::unordered_map<uint32_t, bool>> m_mapQueryResponses;
-
 
    private:
 
@@ -1040,10 +1038,20 @@ namespace swarmmesh {
          
       };
 
-      /** 
-       * Map of queries received so far 
+      /**
+       * Queue of response tuples to be forwarded ordered by query identifier
        */
-      std::unordered_map<uint32_t, uint32_t> m_mapQueryRequests;
+      std::unordered_map<uint32_t, std::vector<STuple>> m_queueQueryResponses;
+
+      /**
+       * Map indicating query response tuples that have been routed already
+       */
+      std::unordered_map<uint32_t, std::unordered_map<uint32_t, bool>> m_mapQueryResponses;
+
+      /** 
+       * Map of queries received so far (Query Identifier -> (HopCount, Destination))
+       */
+      std::unordered_map<uint32_t, std::pair<uint32_t, uint32_t>> m_mapQueryRequests;
 
       /**
        * Message queue
