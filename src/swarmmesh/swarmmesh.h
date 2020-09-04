@@ -92,44 +92,56 @@ namespace swarmmesh {
    /****************************************/
    /****************************************/
 
-   void PackUInt8(std::vector<uint8_t>& vec_buffer, uint8_t un_value);
+   void PackUInt8(std::vector<uint8_t>& vec_buffer,
+                  uint8_t un_value);
 
-   void PackUInt16(std::vector<uint8_t>& vec_buffer, uint16_t un_value);
+   void PackUInt16(std::vector<uint8_t>& vec_buffer,
+                   uint16_t un_value);
 
-   void PackUInt32(std::vector<uint8_t>& vec_buffer, uint32_t un_value);
+   void PackUInt32(std::vector<uint8_t>& vec_buffer,
+                   uint32_t un_value);
 
-   void PackFloat(std::vector<uint8_t>& vec_buffer, float f_value);
+   void PackFloat(std::vector<uint8_t>& vec_buffer,
+                  float f_value);
 
-   void PackString(std::vector<uint8_t>& vec_buffer, std::string str_value);
+   void PackString(std::vector<uint8_t>& vec_buffer,
+                   std::string str_value);
 
-   bool UnpackValid(const std::vector<uint8_t>& vec_buffer, size_t un_offset, size_t un_length);
+   bool UnpackValid(const std::vector<uint8_t>& vec_buffer,
+                    size_t un_offset,
+                    size_t un_length);
 
    template<class T> T UnpackSerializable(T& c_obj,
-                    const std::vector<uint8_t>& vec_buffer,
-                    size_t& un_offset);
+                                          const std::vector<uint8_t>& vec_buffer,
+                                          size_t& un_offset);
 
-   uint8_t UnpackUInt8(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
+   uint8_t UnpackUInt8(const std::vector<uint8_t>& vec_buffer,
+                       size_t& un_offset);
 
-   uint16_t UnpackUInt16(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
+   uint16_t UnpackUInt16(const std::vector<uint8_t>& vec_buffer,
+                         size_t& un_offset);
 
-   uint32_t UnpackUInt32(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
+   uint32_t UnpackUInt32(const std::vector<uint8_t>& vec_buffer,
+                         size_t& un_offset);
 
-   float UnpackFloat(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
+   float UnpackFloat(const std::vector<uint8_t>& vec_buffer,
+                     size_t& un_offset);
 
-   std::string UnpackString(const std::vector<uint8_t>& vec_buffer, size_t& un_offset);
+   std::string UnpackString(const std::vector<uint8_t>& vec_buffer,
+                            size_t& un_offset);
 
    /****************************************/
    /****************************************/
 
    template< typename T, typename Pred >
    typename std::vector<T>::iterator insert_sorted( 
-               std::vector<T> & vec, T const& item, Pred pred )
-   {
-   return vec.insert
-      ( 
-         std::lower_bound( vec.begin(), vec.end(), item, pred ),
-         item 
-      );
+      std::vector<T> & vec_buf, T const& t_item, Pred t_pred ) {
+      return vec_buf.insert(std::lower_bound(
+                           vec_buf.begin(),
+                           vec_buf.end(),
+                           t_item,
+                           t_pred),
+                        t_item);
    }
 
    /****************************************/
@@ -186,7 +198,7 @@ namespace swarmmesh {
        */
       struct STuple {
 
-         swarmmesh::SKey Key;
+         SKey Key;
          T Value;
 
          STuple() = default;
@@ -227,13 +239,16 @@ namespace swarmmesh {
          SQueryRequest() = default;
          SQueryRequest(const SQueryRequest&) = default;
 
-         SQueryRequest(uint32_t un_identifier, std::unordered_map<std::string, std::any> &map_filterParams, 
-                       uint16_t un_filterType, uint16_t un_source, uint32_t un_hopCount) : 
+         SQueryRequest(uint32_t un_identifier,
+                       std::unordered_map<std::string, std::any>& map_filter_params, 
+                       uint16_t un_filter_type,
+                       uint16_t un_source,
+                       uint32_t un_hop_count) : 
                      Identifier(un_identifier),
-                     FilterParameters(map_filterParams),
-                     FilterType(un_filterType),
+                     FilterParameters(map_filter_params),
+                     FilterType(un_filter_type),
                      Source(un_source),
-                     HopCount(un_hopCount) {}
+                     HopCount(un_hop_count) {}
                   
          SQueryRequest& operator=(const SQueryRequest& s_request) {
             HopCount = s_request.HopCount;
@@ -241,7 +256,6 @@ namespace swarmmesh {
             FilterType = s_request.FilterType;
             FilterParameters = s_request.FilterParameters;
             Identifier = s_request.Identifier;
-
             return *this;
          }
       };
@@ -255,11 +269,13 @@ namespace swarmmesh {
          SQueryResponse() = default;
          SQueryResponse(const SQueryResponse&) = default;
 
-         SQueryResponse(const std::vector<STuple>& s_tuples, uint16_t un_dest, uint32_t un_hopCount, 
-                  uint32_t un_identifier) :
+         SQueryResponse(const std::vector<STuple>& s_tuples,
+                        uint16_t un_dest,
+                        uint32_t un_hop_count, 
+                        uint32_t un_identifier) :
             Tuples(s_tuples),
             Destination(un_dest),
-            HopCount(un_hopCount),
+            HopCount(un_hop_count),
             Identifier(un_identifier) {}
       
          SQueryResponse& operator=(const SQueryResponse& s_response) {
@@ -270,21 +286,21 @@ namespace swarmmesh {
       };  
 
       /* Predicate for sorting tuples */
-      struct TupleLess
-      {
-         bool operator()(const STuple& s_x, const STuple& s_y) const {
+      struct TupleLess {
+         bool operator()(const STuple& s_x,
+                         const STuple& s_y) const {
             if (s_x.Key.Hash < s_y.Key.Hash)
-                  return true;
+               return true;
             else if (s_x.Key.Hash == s_y.Key.Hash)
-                  return s_x.Key.Identifier < s_y.Key.Identifier;
+               return s_x.Key.Identifier < s_y.Key.Identifier;
             return false;
          }
       };
 
       /* Predicate for sorting tuples */
-      struct TupleGreater
-      {
-         bool operator()(const STuple& s_x, const STuple& s_y) const {
+      struct TupleGreater {
+         bool operator()(const STuple& s_x,
+                         const STuple& s_y) const {
             if (s_x.Key.Hash > s_y.Key.Hash)
                return true;
             else if (s_x.Key.Hash == s_y.Key.Hash)
@@ -297,16 +313,16 @@ namespace swarmmesh {
    private:
 
       struct SNeighbor {
-
          float Distance;
          float Azimuth;
          uint32_t NodeId = 0;
 
          SNeighbor() {}
 
-         SNeighbor(float f_distance, float f_azimuth):
+         SNeighbor(float f_distance,
+                   float f_azimuth):
          Distance(f_distance),
-         Azimuth(f_azimuth){}
+         Azimuth(f_azimuth) {}
 
       };
 
@@ -358,7 +374,9 @@ namespace swarmmesh {
           * @param map_filterParams Filter Parameters
           * @return void
           */
-         virtual void Init(const std::unordered_map<std::string, std::any>& map_filterParams) = 0;
+         virtual void Init(const std::unordered_map<std::string,
+                           std::any>& map_filterParams) = 0;
+         
          virtual std::unordered_map<std::string, std::any> GetParams() = 0;
       };
 
@@ -411,8 +429,8 @@ namespace swarmmesh {
 
    public:
 
-      CSwarmMesh(std::function < T(const std::vector<uint8_t>&, size_t&) > fun_unpack,
-                 std::function < void(std::vector<uint8_t>&, const T&) > fun_pack) :
+      CSwarmMesh(std::function <T(const std::vector<uint8_t>&, size_t&)> fun_unpack,
+                 std::function <void(std::vector<uint8_t>&, const T&)> fun_pack) :
          m_funUnpack(fun_unpack),
          m_funPack(fun_pack) {
             /* initialize random seed: */
@@ -456,8 +474,7 @@ namespace swarmmesh {
          /* Get available storage memory */
          size_t unFreeMemory = MEMORY_CAPACITY - m_vecStoredTuples.size();
          /* Return node id given current neighbor list and storage memory */
-         uint32_t unRes = (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
-         return unRes;
+         return (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
       }
 
       /* Check if this tuple can be stored */
@@ -470,12 +487,9 @@ namespace swarmmesh {
       }
 
       void Serialize(std::vector<uint8_t>& vec_buffer) override {
-
          /* TODO: handle limited message size */
-
          /* Go through message queue */
          for (auto const& item : m_queueOutMsgs) {
-
             EMsgType eMsgType = item.first;
             switch (eMsgType) {
             case MSG_NGHBRS:
@@ -504,14 +518,12 @@ namespace swarmmesh {
                /* Set message type */
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
                SQueryRequest sRequest = std::any_cast<SQueryRequest>(item.second);
-
                /* Pack source */
                PackUInt16(vec_buffer, sRequest.Source);
                /* Pack Query Identifier */
                PackUInt32(vec_buffer, sRequest.Identifier);
                /* Pack Hop Count */
                PackUInt32(vec_buffer, sRequest.HopCount);
-
                /* Set filter type */
                uint16_t unFilterType = sRequest.FilterType;
                PackUInt16(vec_buffer, unFilterType);
@@ -529,17 +541,14 @@ namespace swarmmesh {
             case MSG_OP_FILTER_RESPONSE: {
                /* Set message type */
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
-
                SQueryResponse sResponse = std::any_cast<SQueryResponse>(item.second);
                /* Set Query Identifier */
                PackUInt32(vec_buffer, sResponse.Identifier);
                /* Set HopCount */
                PackUInt32(vec_buffer, sResponse.HopCount);
                uint32_t unNumTuples = sResponse.Tuples.size();
-
                /* Set number of tuples */
                PackUInt32(vec_buffer, unNumTuples);
-
                /* Pack each tuple */
                for (STuple &sTuple: sResponse.Tuples) {
                   PackUInt32(vec_buffer, sTuple.Key.Hash);
@@ -549,8 +558,7 @@ namespace swarmmesh {
                break;
             }
             case MSG_OP_TUPLE:
-               /* TODO          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, sMsg));
-*/
+               /* TODO m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER, sMsg)); */
                break;
             case MSG_OP_AGGREGATE:
                /* TODO */
@@ -563,8 +571,8 @@ namespace swarmmesh {
          m_queueOutMsgs.clear();
       }
 
-      size_t Deserialize(const std::vector<uint8_t>& vec_buffer, size_t un_offset) override {
-
+      size_t Deserialize(const std::vector<uint8_t>& vec_buffer,
+                         size_t un_offset) override {
          while(un_offset < vec_buffer.size()) {
             /* Get message type */
             uint8_t unMsgType = UnpackUInt8(vec_buffer, un_offset);
@@ -595,58 +603,49 @@ namespace swarmmesh {
                }
                case MSG_OP_FILTER_REQUEST: {
                   /* Unpack Source, Query Identifier, Hop Count */
-
                   uint16_t unSource = UnpackUInt16(vec_buffer, un_offset);
                   uint32_t unQueryId = UnpackUInt32(vec_buffer, un_offset);
                   uint32_t unHopCount = UnpackUInt32(vec_buffer, un_offset);
-
                   /* Create the tuple filter */
                   uint16_t unOpType = UnpackUInt16(vec_buffer, un_offset);
                   CFilterOperation* pcFilterOp = m_cFilters.New(unOpType);
                   un_offset = pcFilterOp->Deserialize(vec_buffer, un_offset);
-
                   /* Request already received */
                   if (m_mapQueryRequests.find(unQueryId) != m_mapQueryRequests.end()) {
+                     delete pcFilterOp;
                      break;
                   }
                   m_mapQueryRequests[unQueryId] = std::make_pair(unHopCount, unSource);
                   std::unordered_map<std::string, std::any> mapFilterParams = pcFilterOp->GetParams();
                   SQueryRequest sRequest(unQueryId, mapFilterParams, unOpType, unSource, unHopCount + 1);
-                  
                   /* Forward request on to neighbors */
                   m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_REQUEST, sRequest));
                   /* Go! */
                   std::vector<STuple> vecResult;
                   DoFilter(vecResult, *pcFilterOp, m_vecStoredTuples);
                   DoFilter(vecResult, *pcFilterOp, m_vecRoutingTuples);
-
                   /* Send response only if there are tuples to be sent */
                   if (vecResult.size() > 0) {
                      SQueryResponse sResponse(vecResult, unSource, unHopCount, unQueryId);
                      m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_RESPONSE, sResponse));
                   }
-
                   delete pcFilterOp;
                   break;
                }
-
                case MSG_OP_FILTER_RESPONSE: {
                   uint32_t unQueryId = UnpackUInt32(vec_buffer, un_offset);
                   uint32_t unHopCount = UnpackUInt32(vec_buffer, un_offset);
                   uint32_t unNumTuples = UnpackUInt32(vec_buffer, un_offset);
-
                   for (uint32_t i = 0; i < unNumTuples; i++) {
                      STuple sTuple;
                      sTuple.Key = SKey(UnpackUInt32(vec_buffer, un_offset), UnpackUInt32(vec_buffer, un_offset));
                      sTuple.Value = m_funUnpack(vec_buffer, un_offset);
-
                      /* Do not route if response is received from node with lower hop count or if corresponding
                      request was not received */
                      if (m_mapQueryRequests.find(unQueryId) == m_mapQueryRequests.end() || 
                         m_mapQueryRequests[unQueryId].first >= unHopCount) {
                         continue;
                      }
-
                      /* Check if received tuple not received previously */
                      if (m_mapQueryResponses.count(unQueryId) <= 0 ||
                         m_mapQueryResponses[unQueryId].count(sTuple.Key.Identifier) <= 0) {
@@ -709,13 +708,13 @@ namespace swarmmesh {
       /**
        * User-facing Filter function
        */
-      void Filter(uint16_t un_type, std::unordered_map<std::string, std::any>& map_filterParams) {
+      void Filter(uint16_t un_type,
+                  std::unordered_map<std::string, std::any>& map_filter_params) {
          m_unQueryCount++;
          uint32_t unQueryId = ((uint32_t) m_unRId << 16) + m_unQueryCount;
          uint32_t unHopCount = 0;
          m_mapQueryRequests[unQueryId] = std::make_pair(unHopCount, m_unRId);
-         SQueryRequest sRequest(unQueryId, map_filterParams, un_type, m_unRId, unHopCount + 1);
-
+         SQueryRequest sRequest(unQueryId, map_filter_params, un_type, m_unRId, unHopCount + 1);
          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_REQUEST, sRequest));
       }
 
@@ -736,8 +735,6 @@ namespace swarmmesh {
          /* Call put operation on tuple */
          DoPut(sTuple);
       }
-   
-
 
       /**
        * Queue messages to send to neighbors.
@@ -745,58 +742,48 @@ namespace swarmmesh {
       void Route() {
          /* Add base message to all neighbors */
          m_queueOutMsgs.insert(std::make_pair(MSG_NGHBRS, SMsg()));
-
          /* Route messages for put operation */
          uint16_t unCount = 0;
          while (!m_mapNeighbors.empty() &&
                 !m_vecRoutingTuples.empty() && 
-                 unCount < TUPLE_THROUGHPUT)
-         {
+                 unCount < TUPLE_THROUGHPUT) {
             STuple sTuple = m_vecRoutingTuples.back();
             m_vecRoutingTuples.pop_back();
             /* Find candidates for receiving tuple */
             std::vector<uint16_t> vecCandidates;
             uint32_t unMax = 0;
             uint16_t unKeyMax = 0;
-            for (auto const& item : m_mapNeighbors)
-            {
+            for (auto const& item : m_mapNeighbors) {
                /* Record all neighbors that can hold tuple */
                if(item.second.NodeId > sTuple.Key.Hash)
                   vecCandidates.push_back(item.first);
                /* Record neighbor of maximum NodeId */
-               if(item.second.NodeId > unMax)
-               {
+               if(item.second.NodeId > unMax) {
                   unMax = item.second.NodeId;
                   unKeyMax = item.first;
                }
             }
-            if(!vecCandidates.empty())
-            {
+            if(!vecCandidates.empty()) {
                /* Pick from candidates at random */
                size_t unIndex = rand() % vecCandidates.size();
                /* Put message in queue */
                m_queueOutMsgs.insert(std::make_pair(MSG_OP_PUT, SMsg(sTuple, vecCandidates[unIndex])));
             }
-            else /* Pick neighbor with highest NodeId */
-            {
+            else { /* Pick neighbor with highest NodeId */
                /* Put message in queue */
                m_queueOutMsgs.insert(std::make_pair(MSG_OP_PUT, SMsg(sTuple, unKeyMax)));
             }
             ++unCount;
          }
-
          // Route MSG_OP_FILTER_RESPONSE messages
-
          for (auto const &item : m_queueQueryResponses) {
             uint32_t unQueryId = item.first;
-
             /* Destination robot reached */
             if (m_mapQueryRequests[unQueryId].second == m_unRId) {
                //TODO: Do something with vecTuples
                std::cout << item.second.size() << " " << m_unRId << std::endl;
                break;
             }
-
             /* Forward response to all neighbors if tuples exist after removing duplicates */
             if (item.second.size() > 0) {
                SQueryResponse sResponse(item.second, m_mapQueryRequests[unQueryId].second, 
@@ -805,12 +792,10 @@ namespace swarmmesh {
             }
          }
          m_queueQueryResponses.clear();
-
-         /*TODO: Route other messages */
+         /* TODO: Route other messages */
          // for (auto const& item : m_queueOutMsgs) {
          //    std::cout << " MESSAGE IN QUEUE " << (uint8_t) item.first << std::endl;
          // }
-
       }
 
       /****************************************/
@@ -895,7 +880,6 @@ namespace swarmmesh {
        * Put operation
        */
       void DoPut(const STuple& s_tuple) {
-         
          /* Compute current Node Id */
          uint32_t unNodeId = Partition();
          /* Decide whether to store tuple or route it */
@@ -907,8 +891,7 @@ namespace swarmmesh {
             /* Move unstorable tuples to routing queue */
             while((!m_vecStoredTuples.empty()) &&
                   (Partition() < unHighestHash || 
-                  m_vecStoredTuples.size() > MEMORY_CAPACITY))
-            {
+                  m_vecStoredTuples.size() > MEMORY_CAPACITY)) {
                /* Put lowest hash tuple in routing queue, hash ascending order */
                insert_sorted(m_vecRoutingTuples, m_vecStoredTuples.back(), TupleLess());
                /* Remove tuple from stored tuples */
@@ -921,8 +904,8 @@ namespace swarmmesh {
          }
 
          /* Discard tuples if total size exceeded */
-         while(m_vecStoredTuples.size() + m_vecRoutingTuples.size() > MEMORY_CAPACITY + ROUTING_CAPACITY)
-         {
+         while(m_vecStoredTuples.size() + m_vecRoutingTuples.size() >
+               MEMORY_CAPACITY + ROUTING_CAPACITY) {
             /* Discard highest hash tuple */
             m_vecRoutingTuples.pop_back();
             /* TODO: add log message or buffer of discarded tuples */
@@ -1023,19 +1006,17 @@ namespace swarmmesh {
       };
 
       struct SMsg {
-         
          uint16_t Destination;
          STuple Msg;
 
          /* Default Constructor */
          SMsg() {}
          /* Constructor */
-         SMsg(STuple s_tuple, uint16_t un_id = 0):
+         SMsg(const STuple& s_tuple, uint16_t un_id = 0):
             Msg(s_tuple),
             Destination(un_id) {}
 
          SMsg(const SMsg&) = default;
-         
       };
 
       /**
@@ -1088,7 +1069,5 @@ namespace swarmmesh {
        * The factory of aggregate operations.
        */
       CFactory<CAggregateOperation> m_cAggregateOps;
-
    };
-
 } 

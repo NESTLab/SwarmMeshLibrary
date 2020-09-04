@@ -109,3 +109,6 @@ std::string swarmmesh::UnpackString(const std::vector<uint8_t>& vec_buffer, size
     }         
     throw swarmmesh::CSwarmMeshException("Can't parse string at offset ", un_offset);
 }
+
+/****************************************/
+/****************************************/
