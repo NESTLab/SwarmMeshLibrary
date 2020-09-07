@@ -51,6 +51,12 @@ namespace swarmmesh {
    /****************************************/
    /****************************************/
 
+   /**
+    * Converts the given object to string and appends it to the given string
+    * @param std_sofar The given string
+    * @param t_arg The object to be converted to string
+    * @return The new string
+    */
    template<typename T>
    std::string MakeString(const std::string& str_sofar, T& t_arg) {
       std::ostringstream cOSS;
@@ -58,6 +64,13 @@ namespace swarmmesh {
       return cOSS.str();
    }
 
+   /**
+    * Converts the given objects to string and appends it to the given string
+    * @param std_sofar The given string
+    * @param t_arg
+    * @param t_rest The objects to be converted to string
+    * @return The new string
+    */
    template<typename T, typename... Args>
    std::string MakeString(const std::string& str_sofar, T& t_arg, Args... t_rest) {
       std::ostringstream cOSS;
@@ -68,6 +81,10 @@ namespace swarmmesh {
    /****************************************/
    /****************************************/
 
+   /**
+    * The SwarmMesh Exception class
+    * 
+    */
    class CSwarmMeshException : std::exception {
 
    public:
@@ -133,6 +150,16 @@ namespace swarmmesh {
    /****************************************/
    /****************************************/
 
+   /**
+    * Insert object into its sorted position in the vector based on the given sorting predicate
+    * 
+    * @tparam T 
+    * @tparam Pred 
+    * @param vec_buf The given vector of objects
+    * @param t_item The object to be inserted
+    * @param t_pred The sorting predicate
+    * @return std::vector<T>::iterator 
+    */
    template< typename T, typename Pred >
    typename std::vector<T>::iterator insert_sorted( 
       std::vector<T> & vec_buf, T const& t_item, Pred t_pred ) {
@@ -161,6 +188,7 @@ namespace swarmmesh {
        * Serializes the object.
        *
        * Adds the serialized representation of this object to the given buffer.
+       * @param vec_buffer The byte buffer
        */
       virtual void Serialize(std::vector<uint8_t>& vec_buffer) = 0;
 
@@ -186,6 +214,12 @@ namespace swarmmesh {
 
    public:
 
+      /**
+       * Initialize members of SwarmMesh
+       * 
+       * @param un_robotId The robot ID
+       * @param fun_hash The Hashing function for the tuple key
+       */
       void Init(uint16_t un_robotId, std::function<SKey(T&)> fun_hash) {
          m_unRId = un_robotId;
          m_funHash = fun_hash;
@@ -239,6 +273,15 @@ namespace swarmmesh {
          SQueryRequest() = default;
          SQueryRequest(const SQueryRequest&) = default;
 
+         /**
+          * Construct a new SQueryRequest object
+          * 
+          * @param un_identifier 
+          * @param map_filter_params 
+          * @param un_filter_type 
+          * @param un_source 
+          * @param un_hop_count 
+          */
          SQueryRequest(uint32_t un_identifier,
                        std::unordered_map<std::string, std::any>& map_filter_params, 
                        uint16_t un_filter_type,
@@ -249,7 +292,13 @@ namespace swarmmesh {
                      FilterType(un_filter_type),
                      Source(un_source),
                      HopCount(un_hop_count) {}
-                  
+
+         /**
+          * @brief Override the assignment operator
+          * 
+          * @param s_request 
+          * @return SQueryRequest& 
+          */
          SQueryRequest& operator=(const SQueryRequest& s_request) {
             HopCount = s_request.HopCount;
             Source = s_request.Source;
@@ -269,6 +318,14 @@ namespace swarmmesh {
          SQueryResponse() = default;
          SQueryResponse(const SQueryResponse&) = default;
 
+         /**
+          * Construct a new SQueryResponse object
+          * 
+          * @param s_tuples 
+          * @param un_dest 
+          * @param un_hop_count 
+          * @param un_identifier 
+          */
          SQueryResponse(const std::vector<STuple>& s_tuples,
                         uint16_t un_dest,
                         uint32_t un_hop_count, 
@@ -278,6 +335,12 @@ namespace swarmmesh {
             HopCount(un_hop_count),
             Identifier(un_identifier) {}
       
+         /**
+          * Override the assignment operator
+          * 
+          * @param s_response 
+          * @return SQueryResponse& 
+          */
          SQueryResponse& operator=(const SQueryResponse& s_response) {
             Tuples = s_response.Tuples;
             Destination = s_response.Destination;
@@ -319,6 +382,12 @@ namespace swarmmesh {
 
          SNeighbor() {}
 
+         /**
+          * Construct a new SNeighbor object
+          * 
+          * @param f_distance 
+          * @param f_azimuth 
+          */
          SNeighbor(float f_distance,
                    float f_azimuth):
          Distance(f_distance),
@@ -372,11 +441,15 @@ namespace swarmmesh {
          /**
           * Initialize filter parameters.
           * @param map_filterParams Filter Parameters
-          * @return void
           */
          virtual void Init(const std::unordered_map<std::string,
                            std::any>& map_filterParams) = 0;
          
+         /**
+          * Get the Paramaters of the filter
+          * 
+          * @return std::unordered_map<std::string, std::any> 
+          */
          virtual std::unordered_map<std::string, std::any> GetParams() = 0;
       };
 
@@ -460,14 +533,22 @@ namespace swarmmesh {
          m_mapNeighbors.clear();
       }
 
-      /* Add new neighbor */
+      /**
+       * Add new neighbor 
+       * 
+       * @param un_robotId The robot ID
+       * @param f_distance Distance to robot
+       * @param f_azimuth Azimuth angle
+       * @return 
+       */
       void AddNeighbor(uint16_t un_robotId, float f_distance, float f_azimuth) {
          m_mapNeighbors[un_robotId] = SNeighbor(f_distance, f_azimuth);
       }
 
-      /* Compute Node ID 
-      *  i.e partition key space
-      */
+      /**
+       * Compute node ID i.e partition key space
+       * @return NodeID
+       */
       uint32_t Partition() {
          /* Get degree in communication graph */
          size_t unNumNeighbors = m_mapNeighbors.size();
@@ -477,7 +558,14 @@ namespace swarmmesh {
          return (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
       }
 
-      /* Check if this tuple can be stored */
+      /**
+       * Check if this tuple can be stored
+       * 
+       * @param s_tuple Tuple to be stored
+       * @param un_nodeId Node ID of the robot
+       * @return true if tuple can be stored
+       * @return false if tuple cannot be stored
+       */
       bool IsStorableTuple(STuple s_tuple, uint32_t un_nodeId) {
          /* Get degree in communication graph */
          size_t unNumNeighbors = m_mapNeighbors.size();
@@ -486,6 +574,11 @@ namespace swarmmesh {
          return s_tuple.Key.Hash < (un_nodeId - unNumNeighbors);
       }
 
+      /**
+       * Serialize all messages and store them in a byte buffer
+       * 
+       * @param vec_buffer The byte buffer
+       */
       void Serialize(std::vector<uint8_t>& vec_buffer) override {
          /* TODO: handle limited message size */
          /* Go through message queue */
@@ -571,6 +664,13 @@ namespace swarmmesh {
          m_queueOutMsgs.clear();
       }
 
+      /**
+       * Deserialize the given byte buffer and retrieve all messages
+       * 
+       * @param vec_buffer The byte buffer
+       * @param un_offset Initial offset
+       * @return size_t Final offset after deserialization
+       */
       size_t Deserialize(const std::vector<uint8_t>& vec_buffer,
                          size_t un_offset) override {
          while(un_offset < vec_buffer.size()) {
@@ -707,6 +807,9 @@ namespace swarmmesh {
 
       /**
        * User-facing Filter function
+       * 
+       * @param un_type Filter type
+       * @param map_filter_params Filter Parameters
        */
       void Filter(uint16_t un_type,
                   std::unordered_map<std::string, std::any>& map_filter_params) {
@@ -716,10 +819,23 @@ namespace swarmmesh {
          m_mapQueryRequests[unQueryId] = std::make_pair(unHopCount, m_unRId);
          SQueryRequest sRequest(unQueryId, map_filter_params, un_type, m_unRId, unHopCount + 1);
          m_queueOutMsgs.insert(std::make_pair(MSG_OP_FILTER_REQUEST, sRequest));
+
+         CFilterOperation* pcFilterOp = m_cFilters.New(un_type);
+         try {
+            pcFilterOp->Init(map_filter_params);
+         } catch (const std::out_of_range& e) {
+            throw CSwarmMeshException("Filter initialization failed ", e.what());
+         }
+         std::vector<STuple> vecResult;
+         DoFilter(vecResult, *pcFilterOp, m_vecStoredTuples);
+         DoFilter(vecResult, *pcFilterOp, m_vecRoutingTuples);
+         m_mapQueryResults[unQueryId] = vecResult;
       }
 
       /**
-       * User-facing put function 
+       * User-facing put function
+       * 
+       * @param t_data Data to be put into swarmmesh data structure
        */
       void Put(const T& t_data) {
          /* Convert user datatype to tuple 
@@ -737,7 +853,7 @@ namespace swarmmesh {
       }
 
       /**
-       * Queue messages to send to neighbors.
+       * Route messages to neighbors.
        */
       void Route() {
          /* Add base message to all neighbors */
@@ -780,8 +896,9 @@ namespace swarmmesh {
             uint32_t unQueryId = item.first;
             /* Destination robot reached */
             if (m_mapQueryRequests[unQueryId].second == m_unRId) {
-               //TODO: Do something with vecTuples
-               std::cout << item.second.size() << " " << m_unRId << std::endl;
+               for (STuple sTuple : item.second) {
+                  m_mapQueryResults[unQueryId].push_back(sTuple);
+               }
                break;
             }
             /* Forward response to all neighbors if tuples exist after removing duplicates */
@@ -878,6 +995,8 @@ namespace swarmmesh {
 
       /**
        * Put operation
+       * 
+       * @param s_tuple Tuple to be put into swarmmesh
        */
       void DoPut(const STuple& s_tuple) {
          /* Compute current Node Id */
@@ -991,6 +1110,11 @@ namespace swarmmesh {
        */
       std::vector<STuple> m_vecRoutingTuples;
 
+      /**
+       * The results for all queries sent by the robot
+       */
+      std::unordered_map<uint32_t, std::vector<STuple>> m_mapQueryResults;
+
 
    private:
 
@@ -1011,7 +1135,13 @@ namespace swarmmesh {
 
          /* Default Constructor */
          SMsg() {}
-         /* Constructor */
+
+         /**
+          * Construct a new SMsg object
+          * 
+          * @param s_tuple 
+          * @param un_id 
+          */
          SMsg(const STuple& s_tuple, uint16_t un_id = 0):
             Msg(s_tuple),
             Destination(un_id) {}

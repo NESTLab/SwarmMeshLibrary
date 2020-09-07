@@ -3,6 +3,13 @@
 /****************************************/
 /****************************************/
 
+/**
+ * Unpack SEventData object from the byte buffer
+ * 
+ * @param vec_buffer The byte buffer
+ * @param un_offset Offset into the buffer
+ * @return SEventData The unpacked object
+ */
 SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& un_offset) {
    SEventData sValue;
    sValue.Type = swarmmesh::UnpackString(vec_buffer, un_offset);
@@ -12,6 +19,12 @@ SEventData UnpackEventDataType(const std::vector<uint8_t>& vec_buffer, size_t& u
    return sValue;
 }
 
+/**
+ * Serialize the given event data into the byte buffer
+ * 
+ * @param vec_buffer The byte buffer
+ * @param s_event The event to be serialized
+ */
 void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_event) {
    swarmmesh::PackString(vec_buffer, s_event.Type);
    swarmmesh::PackFloat(vec_buffer, s_event.Payload);
@@ -182,6 +195,10 @@ size_t CIdentifierFilter::Deserialize(const std::vector<uint8_t>& vec_buffer, si
 /****************************************/
 /****************************************/
 
+/**
+ * Construct a new CSwarmMeshController::CSwarmMeshController object
+ * 
+ */
 CSwarmMeshController::CSwarmMeshController() :
    m_pcWheels(NULL),
    m_pcProximity(NULL),
@@ -226,6 +243,10 @@ void CSwarmMeshController::Init(TConfigurationNode& t_node)
 /****************************************/
 /****************************************/
 
+/**
+ * Movement of robots
+ * 
+ */
 void CSwarmMeshController::Diffuse() 
 {
    /* Get readings from proximity sensor */
@@ -259,7 +280,6 @@ void CSwarmMeshController::Diffuse()
 
 /****************************************/
 /****************************************/
-
 void CSwarmMeshController::ControlStep() 
 {
 
@@ -283,9 +303,9 @@ void CSwarmMeshController::ControlStep()
 
    /* Randomly add Filter messages */
    float fP = m_pcRNG->Uniform(CRange<Real>(0.0, 1.0));
-   if (fP < 0.05) {
+   if (fP < 0.02) {
       /* Filter type */
-      int nFilterType = std::rand() % 3;
+      int nFilterType = m_pcRNG->Uniform(CRange<UInt32>(0, 3));
       std::unordered_map<std::string, std::any> mapFilterParams;
 
       /* Assign parameters based on type */
@@ -322,6 +342,11 @@ void CSwarmMeshController::ControlStep()
 /****************************************/
 /****************************************/
 
+/**
+ * Record all events in the current step
+ * 
+ * @return std::queue<SEventData> Queue of all recorded events
+ */
 std::queue<SEventData> CSwarmMeshController::RecordEvents() 
 {
    std::queue<SEventData> queueEvents;
@@ -380,7 +405,12 @@ std::queue<SEventData> CSwarmMeshController::RecordEvents()
 /****************************************/
 /****************************************/
 
-
+/**
+ * Get absolute coordinates of event
+ * 
+ * @param c_coordEvent The relative coordinates of the event
+ * @return CVector2 Absolute coordinates of the event
+ */
 CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEvent)
 {
    /* Get readings from positioning sensor */
@@ -404,6 +434,10 @@ CVector2 CSwarmMeshController::ComputeAbsolutePosition(const CVector2& c_coordEv
 /****************************************/
 /****************************************/
 
+/**
+ * Process incoming messages received through the Range and Bearing Sensor
+ * 
+ */
 void CSwarmMeshController::ProcessInMsgs()
 {
 
@@ -439,6 +473,10 @@ void CSwarmMeshController::ProcessInMsgs()
 /****************************************/
 /****************************************/
 
+/**
+ * Send outgoing messages through the range and bearing sensor
+ * 
+ */
 void CSwarmMeshController::ProcessOutMsgs()
 {
 

@@ -46,17 +46,22 @@ struct SLocation {
    float Y;
 
    /* Default constructor */
-   SLocation() {}
+   SLocation() = default;
 
-   /* Parameterized constructor */
+   /**
+    * Construct a new SLocation object
+    * 
+    * @param f_x 
+    * @param f_y 
+    */
    SLocation(float f_x, float f_y) : X(f_x), Y(f_y) {}
 
    /* Copy operator */
-      SLocation& operator=(const SLocation& s_location) {
-         X = s_location.X;
-         Y = s_location.Y;
-         return *this;
-      }
+   SLocation& operator=(const SLocation& s_location) {
+      X = s_location.X;
+      Y = s_location.Y;
+      return *this;
+   }
 };
 
 /* Structure representing events */
@@ -81,6 +86,10 @@ void PackEventDataType(std::vector<uint8_t>& vec_buffer, const SEventData& s_val
 /****************************************/
 /****************************************/
 
+/**
+ * Functor to hash data in swarmmesh
+ * 
+ */
 class CHashEventDataType {
 
    private:
@@ -89,6 +98,10 @@ class CHashEventDataType {
    
 
    public:
+      /**
+       * Construct a new CHashEventDataType object
+       * 
+       */
       CHashEventDataType() : 
          m_unRobotId(0),
          m_unTupleCount(0) {}
@@ -97,6 +110,10 @@ class CHashEventDataType {
       swarmmesh::SKey operator()(SEventData& s_value);
 };
 
+/**
+ * User defined instance of swarmmesh
+ * 
+ */
 class CMySwarmMesh : public swarmmesh::CSwarmMesh<SEventData> {
 private:
    CHashEventDataType m_cHashEvent;
@@ -120,6 +137,10 @@ public:
 /****************************************/
 /* User Defined Filters */
 
+/**
+ * Functor to filter tuples according to their type
+ * 
+ */
 class CTypeFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
    private:
       std::string m_strEventType;
@@ -135,6 +156,10 @@ class CTypeFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
       std::unordered_map<std::string, std::any> GetParams() override;
 };
 
+/**
+ * Functor to filter tuples according to their location
+ * 
+ */
 class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
    private:
       SLocation m_sEventLocation;
@@ -151,6 +176,10 @@ class CLocationFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperati
       std::unordered_map<std::string, std::any> GetParams() override;
 };
 
+/**
+ * Functor to filter tuples according to their tuple identifier
+ * 
+ */
 class CIdentifierFilter : public swarmmesh::CSwarmMesh<SEventData>::CFilterOperation {
    private:
       uint32_t m_unEventIdentifier;
