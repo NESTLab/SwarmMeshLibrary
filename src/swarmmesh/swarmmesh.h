@@ -899,7 +899,7 @@ namespace swarmmesh {
                for (STuple sTuple : item.second) {
                   m_mapQueryResults[unQueryId].push_back(sTuple);
                }
-               break;
+               continue;
             }
             /* Forward response to all neighbors if tuples exist after removing duplicates */
             if (item.second.size() > 0) {
