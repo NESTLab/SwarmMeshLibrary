@@ -1,6 +1,27 @@
-# cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.3)
 
-# project(SwarmMeshLibrary)
+project(SwarmMeshLibrary)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+#
+# Compile libswarmmesh
+#
+
+add_library(swarm_mesh_library SHARED
+swarmmesh.h swarmmesh.cpp
+)
+
+install(TARGETS swarm_mesh_library EXPORT SwarmMeshTargets
+  LIBRARY DESTINATION lib/SwarmMeshLibrary
+  ARCHIVE DESTINATION lib/SwarmMeshLibrary
+  RUNTIME DESTINATION bin/
+)
+install(
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/../swarmmesh.h" DESTINATION include/SwarmMeshLibrary
+)
+
 
 # function(my_export_target _target _include_dir)
 #     file(
@@ -18,15 +39,10 @@
 #     export(PACKAGE ${_target})
 # endfunction(my_export_target)
 
-#
-# Compile libswarmmesh
-#
-add_library(swarm_mesh_library SHARED
-swarmmesh.h swarmmesh.cpp
-)
-set_target_properties(swarm_mesh_library PROPERTIES CXX_STANDARD 17)
-target_compile_features(swarm_mesh_library PUBLIC cxx_std_17)
 
-# message("${CMAKE_CURRENT_SOURCE_DIR}")
+#  message("${CMAKE_CURRENT_SOURCE_DIR}")
 
-# my_export_target(swarm_mesh_library "${CMAKE_CURRENT_SOURCE_DIR}")
+# my_export_target(swarm_mesh_library "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+
+# message("Includes")
+# message("${swarm_mesh_library_INCLUDE_DIR}")
