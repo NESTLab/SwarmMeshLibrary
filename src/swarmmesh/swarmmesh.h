@@ -220,9 +220,10 @@ namespace swarmmesh {
        * @param un_robotId The robot ID
        * @param fun_hash The Hashing function for the tuple key
        */
-      void Init(uint16_t un_robotId, std::function<SKey(T&)> fun_hash) {
+      void Init(uint16_t un_robotId, std::function<SKey(T&)> fun_hash, uint16_t un_messageSize = 1000) {
          m_unRId = un_robotId;
          m_funHash = fun_hash;
+         m_unMessageSize = un_messageSize;
       }
 
    public:
@@ -580,9 +581,51 @@ namespace swarmmesh {
        * @param vec_buffer The byte buffer
        */
       void Serialize(std::vector<uint8_t>& vec_buffer) override {
-         /* TODO: handle limited message size */
+
+         /* Current message size */
+         uint16_t unSize = 0;
+
+         /* Previous message size */
+         uint16_t unPrevSize;
+
+         auto itMsgEnd = m_queueOutMsgs.begin();
+
          /* Go through message queue */
-         for (auto const& item : m_queueOutMsgs) {
+         for (; itMsgEnd != m_queueOutMsgs.end(); ++itMsgEnd) {
+            
+            /* Get item in message queue */
+            auto const& item = *itMsgEnd;
+
+            unPrevSize = unSize;
+
+            /* Update current message size */
+            unSize = vec_buffer.size() * 8;
+
+            /* Last message filled buffer */
+            if(unSize == m_unMessageSize){
+               printf(" %d: Exceeded message size \n", m_unRId);
+               break;
+            } 
+            
+            /* Last message exceeded buffer */
+            if (unSize > m_unMessageSize)
+            {
+               printf(" %d: Exceeded message size \n", m_unRId);
+
+               if((unSize - unPrevSize) >= m_unMessageSize) printf("Message can never be sent \n");
+                  
+               /* Remove previous message from buffer */
+               int count = 0;
+               while(count <  (unSize - unPrevSize) / 8)
+               {
+                  vec_buffer.pop_back();
+                  ++count;
+               }
+               /* Update iterator to one after last sent message */
+               --itMsgEnd;
+               break;
+            }
+
             EMsgType eMsgType = item.first;
             switch (eMsgType) {
             case MSG_NGHBRS:
@@ -660,8 +703,18 @@ namespace swarmmesh {
                throw CSwarmMeshException("Unknown message type ", (int) eMsgType);
             }
          }
-         /* TODO handle limited message size */
-         m_queueOutMsgs.clear();
+
+         /* Clear the sent messages in the message queue */
+         auto it = m_queueOutMsgs.begin();
+         while (it != itMsgEnd){
+            m_queueOutMsgs.erase(it++);
+         }
+
+         if(m_queueOutMsgs.size() > 0)
+         {
+            printf("Queue size %lu \n", m_queueOutMsgs.size());
+         }
+
       }
 
       /**
@@ -1087,6 +1140,11 @@ namespace swarmmesh {
        * Unique identifier
        */ 
       uint16_t m_unRId;
+
+      /**
+       * Message size
+       */
+      uint16_t m_unMessageSize;
 
       /**
        * Query count
