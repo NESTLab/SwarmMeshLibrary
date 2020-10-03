@@ -64,7 +64,7 @@ swarmmesh::SKey CHashEventDataType::operator()(SEventData& s_value) {
    std::string strColor = s_value.Type;
 
    /* Data hashing based on blob color */
-   uint32_t unHash;
+   uint16_t unHash;
    if(strColor == "gray10") {unHash = 1;}
    else if(strColor == "white") {unHash = 1 + BUCKET_SIZE;}
    else if(strColor == "red") {unHash = 1 + 2 * BUCKET_SIZE;}
@@ -328,7 +328,7 @@ void CSwarmMeshController::ControlStep()
       // default: throw THROW_ARGOSEXCEPTION("Invalid filter type : ");
          // break;
       }
-      m_cMySM.Filter((uint16_t) nFilterType, mapFilterParams);
+      m_cMySM.Filter((uint8_t) nFilterType, mapFilterParams);
    }
 
    /* Tell SwarmMesh to queue messages for routing data */
