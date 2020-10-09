@@ -55,7 +55,7 @@ void swarmmesh::PackFloat(std::vector<uint8_t>& vec_buffer, float f_value) {
  * @param un_value The given string
  */
 void swarmmesh::PackString(std::vector<uint8_t>& vec_buffer, std::string str_value) {
-    vec_buffer.push_back(uint8_t(str_value.size()));
+    PackUInt8(vec_buffer, str_value.length());
     for (auto it = str_value.begin(); it != str_value.end(); ++it)
     {
         vec_buffer.push_back((uint8_t)(*it));
@@ -185,7 +185,7 @@ std::string swarmmesh::UnpackString(const std::vector<uint8_t>& vec_buffer, size
     }
     if(swarmmesh::UnpackValid(vec_buffer, un_offset, unLength)) {
         std::string strReturn;
-        for(size_t i = 0; i < unLength; ++i) {
+        for(uint8_t i = 0; i < unLength; i++) {
           strReturn += vec_buffer[un_offset++];
         }
         return strReturn;

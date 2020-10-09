@@ -631,6 +631,8 @@ namespace swarmmesh {
             case MSG_OP_PUT: {
                /* Set message type */
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
+               /* Pack destination */
+               PackUInt16(vec_buffer, item.first);
                /* Get messages from map */
                SMsg sMsg = std::any_cast<SMsg>(item.second);
                STuple sTuple = sMsg.Msg;
@@ -751,11 +753,15 @@ namespace swarmmesh {
                case MSG_OP_PUT: {
                   // return un_offset;
                   /* Create the tuple */
+                  /* Unpack destination */
+                  uint16_t unDestination = UnpackUInt16(vec_buffer, un_offset);
                   STuple sTuple;
                   sTuple.Value = m_funUnpack(vec_buffer, un_offset);
                   sTuple.Key = m_funHash(sTuple.Value);
                   /* Perform put operation */
-                  DoPut(sTuple);
+                  if (unDestination == m_unRId) {
+                     DoPut(sTuple);
+                  }
                   break;
                }
                case MSG_OP_ERASE: {
@@ -949,7 +955,6 @@ namespace swarmmesh {
        */
       void Erase(uint8_t un_type,
                  std::unordered_map<std::string, std::any>& map_filter_params) {
-
          m_unQueryCount++;
          uint32_t unQueryId = ((uint32_t) m_unRId << 16) + m_unQueryCount;         
 
@@ -965,6 +970,7 @@ namespace swarmmesh {
          } catch (const std::out_of_range& e) {
             throw CSwarmMeshException("Erase filter initialization failed ", e.what());
          }
+         
          DoErase(*pcFilterOp, m_vecStoredTuples);
          DoErase(*pcFilterOp, m_vecRoutingTuples);
       }
