@@ -698,7 +698,7 @@ namespace swarmmesh {
                PackUInt8(vec_buffer, unNumTuples);
                /* Pack each tuple */
                for (STuple &sTuple: sResponse.Tuples) {
-                  PackUInt32(vec_buffer, sTuple.Key.Hash);
+                  PackUInt16(vec_buffer, sTuple.Key.Hash);
                   PackUInt32(vec_buffer, sTuple.Key.Identifier);
                   m_funPack(vec_buffer, sTuple.Value);
                }
