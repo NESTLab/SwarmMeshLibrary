@@ -785,6 +785,7 @@ namespace swarmmesh {
                   SQueryRequest sRequest(unQueryId, mapFilterParams, unOpType, unSource, 0);
                   /* Forward request on to neighbors */
                   m_queueOutMsgs.insert(std::make_pair(MSG_OP_ERASE, sRequest));
+                  m_bufEraseRequests.push_back(unQueryId);
 
                   DoErase(*pcFilterOp, m_vecStoredTuples);
                   DoErase(*pcFilterOp, m_vecRoutingTuples);
@@ -963,7 +964,6 @@ namespace swarmmesh {
 
          SQueryRequest sRequest(unQueryId, map_filter_params, un_type, m_unRId, 0);
          m_queueOutMsgs.insert(std::make_pair(MSG_OP_ERASE, sRequest));
-
          CFilterOperation* pcFilterOp = m_cFilters.New(un_type);
          try {
             pcFilterOp->Init(map_filter_params);
