@@ -533,6 +533,14 @@ namespace swarmmesh {
          return m_vecStoredTuples;
       }
 
+      inline const uint16_t GetStorageCapacity() const {
+         return STORAGE_CAPACITY_DEFAULT;
+      }
+
+      inline const uint16_t GetRoutingCapacity() const {
+         return ROUTING_CAPACITY_DEFAULT;
+      }
+
       inline std::vector<STuple>& RoutingTuples() {
          return m_vecRoutingTuples;
       }
@@ -934,7 +942,7 @@ namespace swarmmesh {
        * 
        * @param t_data Data to be put into swarmmesh data structure
        */
-      void Put(const T& t_data) {
+      uint16_t Put(const T& t_data) {
          /* Convert user datatype to tuple 
             using user-defined pack/unpack 
             functions  */
@@ -947,6 +955,7 @@ namespace swarmmesh {
          sTuple.Key = m_funHash(sTuple.Value);
          /* Call put operation on tuple */
          DoPut(sTuple);
+         return sTuple.Key.Hash;
       }
 
       /**
