@@ -636,7 +636,10 @@ namespace swarmmesh {
                /* Get messages from map */
                SMsg sMsg = std::any_cast<SMsg>(item.second);
                STuple sTuple = sMsg.Msg;
-               /* Serialize */
+               /* Serialize tuple key */
+               PackUInt16(vec_buffer, sTuple.Key.Hash);
+               PackUInt32(vec_buffer, sTuple.Key.Identifier);
+               /* Serialize tuple content */
                m_funPack(vec_buffer, sTuple.Value);
                break;
             }
@@ -756,8 +759,11 @@ namespace swarmmesh {
                   /* Unpack destination */
                   uint16_t unDestination = UnpackUInt16(vec_buffer, un_offset);
                   STuple sTuple;
+                  /* Deserialize tuple key */
+                  sTuple.Key = SKey(UnpackUInt16(vec_buffer, un_offset), 
+                                    UnpackUInt32(vec_buffer, un_offset));
+                  /* Deserialize tuple content */
                   sTuple.Value = m_funUnpack(vec_buffer, un_offset);
-                  sTuple.Key = m_funHash(sTuple.Value);
                   /* Perform put operation */
                   if (unDestination == m_unRId) {
                      DoPut(sTuple);
@@ -933,8 +939,9 @@ namespace swarmmesh {
        * User-facing put function
        * 
        * @param t_data Data to be put into swarmmesh data structure
+       * @return Tuple unique identifier
        */
-      void Put(const T& t_data) {
+      uint32_t Put(const T& t_data) {
          /* Convert user datatype to tuple 
             using user-defined pack/unpack 
             functions  */
@@ -947,6 +954,7 @@ namespace swarmmesh {
          sTuple.Key = m_funHash(sTuple.Value);
          /* Call put operation on tuple */
          DoPut(sTuple);
+         return sTuple.Key.Identifier;
       }
 
       /**
@@ -1042,7 +1050,9 @@ namespace swarmmesh {
          /* Get degree in communication graph */
          size_t unNumNeighbors = m_mapNeighbors.size();
          /* Get available storage memory */
-         size_t unFreeMemory = m_unStorageSize - m_vecStoredTuples.size();
+         size_t unFreeMemory = 0;
+         if(m_vecStoredTuples.size() < m_unStorageSize && (m_vecRoutingTuples.size() + m_vecStoredTuples.size()) < m_unRoutingSize + m_unStorageSize)
+            unFreeMemory = m_unRoutingSize + m_unStorageSize - (m_vecStoredTuples.size() + m_vecRoutingTuples.size());
          /* Return node id given current neighbor list and storage memory */
          return (unNumNeighbors == 0) ? unFreeMemory : unFreeMemory * unNumNeighbors;
       }
@@ -1158,8 +1168,7 @@ namespace swarmmesh {
             uint16_t unHighestHash = (m_vecStoredTuples.front()).Key.Hash;
             /* Move unstorable tuples to routing queue */
             while((!m_vecStoredTuples.empty()) &&
-                  (Partition() < unHighestHash || 
-                  m_vecStoredTuples.size() > m_unStorageSize)) {
+                  (Partition() <= unHighestHash || m_vecStoredTuples.size() > m_unStorageSize)) {
                /* Put lowest hash tuple in routing queue, hash ascending order */
                insert_sorted(m_vecRoutingTuples, m_vecStoredTuples.back(), TupleLess());
                /* Remove tuple from stored tuples */
@@ -1306,8 +1315,9 @@ namespace swarmmesh {
          // printf("Node id %lu , neighbors %lu \n", un_nodeId, unNumNeighbors);
          // printf("Trying to store tuple with hash %lu \n", s_tuple.Key.Hash);
          /* Storable if node id higher than hash 
-            if storing it */
-         return s_tuple.Key.Hash < (un_nodeId - unNumNeighbors);
+            after storing it */
+         uint16_t unPotentialNodeId = (unNumNeighbors == 0) ? un_nodeId - 1 : un_nodeId - unNumNeighbors;
+         return s_tuple.Key.Hash < unPotentialNodeId;
       }
 
    private:
