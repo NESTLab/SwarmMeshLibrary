@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.3)
 
-project(SwarmMeshLibrary)
+#set(CMAKE_INSTALL_PREFIX ~/swarmmeshbundle)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#project(SwarmMeshLibrary)
+
+message("${CMAKE_INSTALL_PREFIX}")
 
 #
 # Compile libswarmmesh
@@ -12,6 +13,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(swarm_mesh_library SHARED
 swarmmesh.h swarmmesh.cpp
 )
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 install(TARGETS swarm_mesh_library EXPORT SwarmMeshTargets
   LIBRARY DESTINATION lib/SwarmMeshLibrary
