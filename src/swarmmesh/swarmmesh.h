@@ -639,11 +639,13 @@ namespace swarmmesh {
             case MSG_OP_PUT: {
                /* Set message type */
                PackUInt8(vec_buffer, (uint8_t) eMsgType);
-               /* Pack destination */
-               PackUInt16(vec_buffer, item.first);
-               /* Get messages from map */
                SMsg sMsg = std::any_cast<SMsg>(item.second);
+               /* Pack destination */
+               PackUInt16(vec_buffer, sMsg.Destination);
+               // printf("%u sending to %u \n", m_unRId, sMsg.Destination);
+               /* Get messages from map */
                STuple sTuple = sMsg.Msg;
+               // printf("Tuple %u %u", sTuple.Key.Identifier, sTuple.Key.Hash);
                /* Serialize tuple key */
                PackUInt16(vec_buffer, sTuple.Key.Hash);
                PackUInt32(vec_buffer, sTuple.Key.Identifier);
@@ -768,12 +770,14 @@ namespace swarmmesh {
                   uint16_t unDestination = UnpackUInt16(vec_buffer, un_offset);
                   STuple sTuple;
                   /* Deserialize tuple key */
-                  sTuple.Key = SKey(UnpackUInt16(vec_buffer, un_offset), 
-                                    UnpackUInt32(vec_buffer, un_offset));
+                  sTuple.Key = {UnpackUInt16(vec_buffer, un_offset), 
+                                UnpackUInt32(vec_buffer, un_offset)};
+                  // printf("%u should receive tuple %u %u \n", unDestination, sTuple.Key.Identifier, sTuple.Key.Hash);
                   /* Deserialize tuple content */
                   sTuple.Value = m_funUnpack(vec_buffer, un_offset);
                   /* Perform put operation */
                   if (unDestination == m_unRId) {
+                     // printf("%d received tuple to route, %u %u \n", unDestination, sTuple.Key.Identifier, sTuple.Key.Hash);
                      DoPut(sTuple);
                   }
                   break;
@@ -1022,10 +1026,12 @@ namespace swarmmesh {
                /* Pick from candidates at random */
                size_t unIndex = rand() % vecCandidates.size();
                /* Put message in queue */
+               // printf("Candidate %u, in message queue: %u %u \n", vecCandidates[unIndex], sTuple.Key.Identifier, sTuple.Key.Hash);
                m_queueOutMsgs.insert(std::make_pair(MSG_OP_PUT, SMsg(sTuple, vecCandidates[unIndex])));
             }
             else { /* Pick neighbor with highest NodeId */
                /* Put message in queue */
+               // printf("No candidates - %u, in message queue: %u %u \n", unKeyMax , sTuple.Key.Identifier, sTuple.Key.Hash);
                m_queueOutMsgs.insert(std::make_pair(MSG_OP_PUT, SMsg(sTuple, unKeyMax)));
             }
             ++unCount;
@@ -1186,6 +1192,7 @@ namespace swarmmesh {
          else {
             /* Put tuple in routing queue, hash ascending order */
             insert_sorted(m_vecRoutingTuples, s_tuple, TupleLess());
+            // printf("Added to routing queue: %u %u \n", s_tuple.Key.Identifier, s_tuple.Key.Hash);
          }
 
          /* Discard tuples if total size exceeded */
